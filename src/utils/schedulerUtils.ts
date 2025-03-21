@@ -31,7 +31,8 @@ export const getAprilTuesdaysAndFridays = (): CalendarDay[] => {
     // 2 is Tuesday, 5 is Friday
     if (dayOfWeek === 2 || dayOfWeek === 5) {
       days.push({
-        date: new Date(date),
+        id: `april-${date.getDate()}`,
+        date: date.toISOString(),
         dayOfWeek,
         isActive: true,
         members: [],
@@ -53,7 +54,7 @@ export const generateMembers = (): Member[] => {
   ];
   
   return names.map((name, index) => ({
-    id: index + 1,
+    id: `${index + 1}`, // Convert to string
     name,
     isCore: index < 3 // First 3 members are core members
   }));

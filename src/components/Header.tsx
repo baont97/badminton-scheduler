@@ -9,12 +9,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Shield } from "lucide-react";
 
 const Header: React.FC = () => {
   const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
+  const isAdmin = profile?.is_admin === true;
 
   const handleSignOut = async () => {
     await signOut();
@@ -53,7 +55,15 @@ const Header: React.FC = () => {
                   <div className="flex flex-col space-y-1 p-2 leading-none">
                     <p className="font-medium">{profile?.full_name || "Người dùng"}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
+                    {isAdmin && (
+                      <div className="mt-1">
+                        <span className="text-xs bg-badminton/20 text-badminton px-2 py-0.5 rounded-full">
+                          Quản trị viên
+                        </span>
+                      </div>
+                    )}
                   </div>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={() => navigate("/profile")}
                     className="cursor-pointer"
@@ -61,6 +71,18 @@ const Header: React.FC = () => {
                     <User className="mr-2 h-4 w-4" />
                     <span>Hồ sơ của tôi</span>
                   </DropdownMenuItem>
+                  
+                  {isAdmin && (
+                    <DropdownMenuItem 
+                      onClick={() => navigate("/admin")}
+                      className="cursor-pointer"
+                    >
+                      <Shield className="mr-2 h-4 w-4" />
+                      <span>Quản trị</span>
+                    </DropdownMenuItem>
+                  )}
+                  
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem 
                     onClick={handleSignOut}
                     className="cursor-pointer text-red-500 focus:text-red-500"

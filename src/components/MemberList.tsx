@@ -14,18 +14,8 @@ interface MemberListProps {
 
 const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => {
   const [loading, setLoading] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const { user } = useAuth();
-
-  useEffect(() => {
-    // Check if current user is an admin
-    const checkAdminStatus = async () => {
-      const admin = await isCurrentUserAdmin();
-      setIsAdmin(admin);
-    };
-    
-    checkAdminStatus();
-  }, [user]);
+  const { profile } = useAuth();
+  const isAdmin = profile?.is_admin === true;
 
   const toggleCoreMemberStatus = async (member: Member) => {
     if (!isAdmin) {
@@ -81,6 +71,11 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
                 {member.name.charAt(0)}
               </div>
               <span className="font-medium">{member.name}</span>
+              {member.isCore && (
+                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-badminton-light text-badminton-dark">
+                  Thành viên cứng
+                </span>
+              )}
             </div>
             
             {isAdmin && (
