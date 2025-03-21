@@ -1,7 +1,9 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { CalendarDay, Member, getDayName, formatDate } from "@/utils/schedulerUtils";
 import { toast } from "sonner";
+import { fetchDayParticipants, toggleParticipation } from "@/utils/apiUtils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CalendarProps {
   days: CalendarDay[];
@@ -11,45 +13,69 @@ interface CalendarProps {
 
 const Calendar: React.FC<CalendarProps> = ({ days, members, onUpdateDays }) => {
   const [hoveredDay, setHoveredDay] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
-  const handleToggleMember = (dayIndex: number, memberId: number) => {
-    const day = days[dayIndex];
-    const updatedDays = [...days];
-    
-    // Check if member is already in the day
-    const isMemberInDay = day.members.includes(memberId);
-    
-    if (isMemberInDay) {
-      // If member is core, they cannot be removed
-      const member = members.find(m => m.id === memberId);
-      if (member?.isCore) {
-        toast.error("Không thể xóa thành viên cứng khỏi lịch");
-        return;
-      }
-      
-      // Remove member from day
-      updatedDays[dayIndex] = {
-        ...day,
-        members: day.members.filter(id => id !== memberId)
-      };
-    } else {
-      // Add member to day if not at max capacity
-      if (day.members.length >= day.maxMembers) {
-        toast.error(`Đã đạt giới hạn ${day.maxMembers} người cho ngày này`);
-        return;
-      }
-      
-      updatedDays[dayIndex] = {
-        ...day,
-        members: [...day.members, memberId]
-      };
+  const handleToggleMember = async (dayIndex: number, memberId: string) => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để tham gia");
+      return;
     }
     
-    onUpdateDays(updatedDays);
+    // Only allow users to toggle their own participation
+    if (memberId !== user.id) {
+      toast.error("Bạn chỉ có thể thay đổi trạng thái tham gia của chính mình");
+      return;
+    }
+    
+    const day = days[dayIndex];
+    const isMemberInDay = day.members.includes(memberId);
+    
+    // Check core member status
+    const member = members.find(m => m.id === memberId);
+    if (isMemberInDay && member?.isCore) {
+      toast.error("Không thể xóa thành viên cứng khỏi lịch");
+      return;
+    }
+    
+    // Check max members limit
+    if (!isMemberInDay && day.members.length >= day.maxMembers) {
+      toast.error(`Đã đạt giới hạn ${day.maxMembers} người cho ngày này`);
+      return;
+    }
+    
+    setLoading(true);
+    
+    // Toggle participation in database
+    const success = await toggleParticipation(day.id, memberId, isMemberInDay);
+    
+    if (success) {
+      const updatedDays = [...days];
+      
+      if (isMemberInDay) {
+        // Remove member from day
+        updatedDays[dayIndex] = {
+          ...day,
+          members: day.members.filter(id => id !== memberId)
+        };
+      } else {
+        // Add member to day
+        updatedDays[dayIndex] = {
+          ...day,
+          members: [...day.members, memberId]
+        };
+      }
+      
+      onUpdateDays(updatedDays);
+    } else {
+      toast.error("Có lỗi xảy ra khi cập nhật trạng thái tham gia");
+    }
+    
+    setLoading(false);
   };
 
   // Auto-add core members to all days
-  React.useEffect(() => {
+  useEffect(() => {
     const coreMembers = members.filter(member => member.isCore).map(member => member.id);
     
     let needsUpdate = false;
@@ -106,12 +132,15 @@ const Calendar: React.FC<CalendarProps> = ({ days, members, onUpdateDays }) => {
             <div className="space-y-2">
               {members.map(member => {
                 const isInDay = day.members.includes(member.id);
+                const canToggle = user && member.id === user.id && (!member.isCore || !isInDay);
+                
                 return (
                   <div 
                     key={member.id}
                     className={`flex items-center justify-between p-2 rounded-lg transition-all duration-200 
-                      ${isInDay ? 'bg-badminton bg-opacity-10' : 'hover:bg-gray-100'}`}
-                    onClick={() => handleToggleMember(dayIndex, member.id)}
+                      ${isInDay ? 'bg-badminton bg-opacity-10' : 'hover:bg-gray-100'}
+                      ${canToggle ? 'cursor-pointer' : 'cursor-default'}`}
+                    onClick={() => canToggle && handleToggleMember(dayIndex, member.id)}
                   >
                     <div className="flex items-center">
                       <div className={`w-4 h-4 rounded-sm border flex items-center justify-center mr-2 checkbox-animation

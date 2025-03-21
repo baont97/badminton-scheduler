@@ -1,9 +1,11 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Member } from "@/utils/schedulerUtils";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { fetchUsers, toggleCoreMember, isCurrentUserAdmin } from "@/utils/apiUtils";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface MemberListProps {
   members: Member[];
@@ -11,27 +13,52 @@ interface MemberListProps {
 }
 
 const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => {
-  const toggleCoreMember = (id: number) => {
-    const updatedMembers = members.map(member => {
-      if (member.id === id) {
-        return {
-          ...member,
-          isCore: !member.isCore
-        };
-      }
-      return member;
-    });
+  const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const { user } = useAuth();
+
+  useEffect(() => {
+    // Check if current user is an admin
+    const checkAdminStatus = async () => {
+      const admin = await isCurrentUserAdmin();
+      setIsAdmin(admin);
+    };
     
-    onUpdateMembers(updatedMembers);
+    checkAdminStatus();
+  }, [user]);
+
+  const toggleCoreMemberStatus = async (member: Member) => {
+    if (!isAdmin) {
+      toast.error("Bạn không có quyền quản lý thành viên cứng");
+      return;
+    }
     
-    const member = members.find(m => m.id === id);
-    if (member) {
+    setLoading(true);
+    const success = await toggleCoreMember(member.id, member.isCore);
+    
+    if (success) {
+      const updatedMembers = members.map(m => {
+        if (m.id === member.id) {
+          return {
+            ...m,
+            isCore: !m.isCore
+          };
+        }
+        return m;
+      });
+      
+      onUpdateMembers(updatedMembers);
+      
       if (!member.isCore) {
         toast.success(`${member.name} đã được thêm vào danh sách thành viên cứng`);
       } else {
         toast.info(`${member.name} đã được xóa khỏi danh sách thành viên cứng`);
       }
+    } else {
+      toast.error("Có lỗi xảy ra khi cập nhật trạng thái thành viên");
     }
+    
+    setLoading(false);
   };
 
   return (
@@ -56,14 +83,17 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
               <span className="font-medium">{member.name}</span>
             </div>
             
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted-foreground mr-1">Thành viên cứng</span>
-              <Switch 
-                checked={member.isCore}
-                onCheckedChange={() => toggleCoreMember(member.id)}
-                className="data-[state=checked]:bg-badminton"
-              />
-            </div>
+            {isAdmin && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground mr-1">Thành viên cứng</span>
+                <Switch 
+                  checked={member.isCore}
+                  onCheckedChange={() => toggleCoreMemberStatus(member)}
+                  disabled={loading}
+                  className="data-[state=checked]:bg-badminton"
+                />
+              </div>
+            )}
           </div>
         ))}
       </div>
