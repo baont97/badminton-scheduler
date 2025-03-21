@@ -6,6 +6,14 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { fetchUsers, toggleCoreMember, isCurrentUserAdmin } from "@/utils/apiUtils";
 import { useAuth } from "@/contexts/AuthContext";
+import { Badge } from "@/components/ui/badge";
+import { ShieldCheck, Info } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface MemberListProps {
   members: Member[];
@@ -19,7 +27,9 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
 
   const toggleCoreMemberStatus = async (member: Member) => {
     if (!isAdmin) {
-      toast.error("Bạn không có quyền quản lý thành viên cứng");
+      toast.error("Bạn không có quyền quản lý thành viên cứng", {
+        description: "Chỉ admin mới có thể thay đổi trạng thái thành viên cứng"
+      });
       return;
     }
     
@@ -54,7 +64,22 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
   return (
     <div className="glass-card p-6 animate-slide-up">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-lg font-medium">Danh sách thành viên</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-medium">Danh sách thành viên</h2>
+          {isAdmin && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge variant="outline" className="flex items-center gap-1 border-badminton text-badminton">
+                  <ShieldCheck className="h-3 w-3" />
+                  <span>Quyền Admin</span>
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Bạn có thể thay đổi trạng thái thành viên cứng</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
         <div className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-badminton-light text-badminton-dark">
           {members.length} người
         </div>
@@ -72,23 +97,39 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
               </div>
               <span className="font-medium">{member.name}</span>
               {member.isCore && (
-                <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-badminton-light text-badminton-dark">
+                <Badge variant="secondary" className="bg-badminton-light text-badminton-dark">
                   Thành viên cứng
-                </span>
+                </Badge>
               )}
             </div>
             
-            {isAdmin && (
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-muted-foreground mr-1">Thành viên cứng</span>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground mr-1">Thành viên cứng</span>
+              {isAdmin ? (
                 <Switch 
                   checked={member.isCore}
                   onCheckedChange={() => toggleCoreMemberStatus(member)}
                   disabled={loading}
                   className="data-[state=checked]:bg-badminton"
                 />
-              </div>
-            )}
+              ) : (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center">
+                      <Switch 
+                        checked={member.isCore}
+                        disabled={true}
+                        className="data-[state=checked]:bg-badminton opacity-50 cursor-not-allowed"
+                      />
+                      <Info className="h-4 w-4 ml-1 text-muted-foreground" />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Chỉ admin mới có thể thay đổi trạng thái thành viên cứng</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           </div>
         ))}
       </div>

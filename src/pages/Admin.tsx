@@ -4,12 +4,14 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertTriangle, CheckCircle, UserPlus } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const createUserSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -21,7 +23,8 @@ type CreateUserFormValues = z.infer<typeof createUserSchema>;
 
 const Admin = () => {
   const [loading, setLoading] = useState(false);
-
+  const { profile } = useAuth();
+  
   const form = useForm<CreateUserFormValues>({
     resolver: zodResolver(createUserSchema),
     defaultValues: {
@@ -47,7 +50,9 @@ const Admin = () => {
       if (responseData?.error) throw new Error(responseData.error);
 
       // Success
-      toast.success(`Đã tạo tài khoản cho ${data.fullName}`);
+      toast.success(`Đã tạo tài khoản cho ${data.fullName}`, {
+        description: "Thành viên mới đã được tạo thành công"
+      });
       form.reset();
 
     } catch (error: any) {
@@ -55,14 +60,37 @@ const Admin = () => {
       
       // Check for specific error conditions
       if (error.message.includes("already exists")) {
-        toast.error("Email này đã được sử dụng");
+        toast.error("Email này đã được sử dụng", {
+          description: "Vui lòng sử dụng email khác để tạo tài khoản"
+        });
       } else {
-        toast.error(error.message || "Có lỗi xảy ra khi tạo tài khoản");
+        toast.error("Có lỗi xảy ra khi tạo tài khoản", {
+          description: error.message || "Vui lòng thử lại sau"
+        });
       }
     } finally {
       setLoading(false);
     }
   };
+
+  // Redirect if not admin
+  if (profile && !profile.is_admin) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="text-destructive h-5 w-5" />
+              Không có quyền truy cập
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>Bạn không có quyền quản trị để truy cập trang này.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -70,7 +98,10 @@ const Admin = () => {
       
       <Tabs defaultValue="create-user" className="w-full">
         <TabsList className="mb-6">
-          <TabsTrigger value="create-user">Tạo Tài Khoản</TabsTrigger>
+          <TabsTrigger value="create-user" className="flex items-center gap-1">
+            <UserPlus className="h-4 w-4" />
+            Tạo Tài Khoản
+          </TabsTrigger>
           <TabsTrigger value="other">Quản lý khác</TabsTrigger>
         </TabsList>
         
@@ -137,6 +168,12 @@ const Admin = () => {
                 </form>
               </Form>
             </CardContent>
+            <CardFooter className="bg-muted/50 flex justify-between text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+                <span>Chỉ admin mới có quyền tạo tài khoản</span>
+              </div>
+            </CardFooter>
           </Card>
         </TabsContent>
         
