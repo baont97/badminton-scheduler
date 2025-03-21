@@ -4,7 +4,7 @@ import Calendar from "@/components/Calendar";
 import MemberList from "@/components/MemberList";
 import StatisticsTable from "@/components/StatisticsTable";
 import { Member, CalendarDay } from "@/utils/schedulerUtils";
-import { fetchUsers } from "@/utils/apiUtils";
+import { fetchUsers, fetchDayParticipants } from "@/utils/apiUtils";
 import { toast } from "sonner";
 
 // Generate example schedule data - this would come from backend in a real app
@@ -39,22 +39,36 @@ const Index = () => {
   const [days, setDays] = useState<CalendarDay[]>(generateInitialDays());
   const [loading, setLoading] = useState(true);
 
-  // Fetch users on component mount
+  // Fetch users and day participants on component mount
   useEffect(() => {
-    const loadUsers = async () => {
+    const loadData = async () => {
       setLoading(true);
       try {
+        // Fetch users
         const users = await fetchUsers();
         setMembers(users);
+        
+        // Fetch participants for each day
+        const updatedDays = await Promise.all(
+          days.map(async (day) => {
+            const participants = await fetchDayParticipants(day.id);
+            return {
+              ...day,
+              members: participants
+            };
+          })
+        );
+        
+        setDays(updatedDays);
       } catch (error) {
-        console.error("Error loading users:", error);
-        toast.error("Có lỗi xảy ra khi tải dữ liệu người dùng");
+        console.error("Error loading data:", error);
+        toast.error("Có lỗi xảy ra khi tải dữ liệu");
       } finally {
         setLoading(false);
       }
     };
     
-    loadUsers();
+    loadData();
   }, []);
 
   if (loading) {

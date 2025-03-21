@@ -2,16 +2,17 @@
 import { toast } from "sonner";
 
 export interface Member {
-  id: number;
+  id: string; // Changed from number to string to match Supabase UUIDs
   name: string;
   isCore: boolean;
 }
 
 export interface CalendarDay {
-  date: Date;
+  id: string; // Added id field for the CalendarDay type
+  date: string; // Changed from Date to string for ISO format
   dayOfWeek: number;
   isActive: boolean;
-  members: number[];
+  members: string[]; // Changed from number[] to string[] to match Member id type
   maxMembers: number;
 }
 
@@ -61,7 +62,7 @@ export const generateMembers = (): Member[] => {
 // Calculate cost per person per day
 export const calculateCostPerPerson = (
   days: CalendarDay[], 
-  memberId: number
+  memberId: string // Changed from number to string
 ): { totalDays: number; totalCost: number } => {
   const participatingDays = days.filter(day => 
     day.isActive && day.members.includes(memberId)
@@ -87,7 +88,7 @@ export const calculateCostPerPerson = (
 export const addMemberToDay = (
   days: CalendarDay[],
   dayIndex: number,
-  memberId: number
+  memberId: string // Changed from number to string
 ): CalendarDay[] => {
   const updatedDays = [...days];
   const day = updatedDays[dayIndex];
@@ -111,7 +112,7 @@ export const addMemberToDay = (
 export const removeMemberFromDay = (
   days: CalendarDay[],
   dayIndex: number,
-  memberId: number
+  memberId: string // Changed from number to string
 ): CalendarDay[] => {
   const updatedDays = [...days];
   const day = updatedDays[dayIndex];
@@ -140,8 +141,9 @@ export const getDayName = (dayOfWeek: number): string => {
 };
 
 // Format date to dd/MM
-export const formatDate = (date: Date): string => {
-  const day = date.getDate();
-  const month = date.getMonth() + 1;
+export const formatDate = (date: string): string => {
+  const dateObj = new Date(date);
+  const day = dateObj.getDate();
+  const month = dateObj.getMonth() + 1;
   return `${day < 10 ? '0' + day : day}/${month < 10 ? '0' + month : month}`;
 };
