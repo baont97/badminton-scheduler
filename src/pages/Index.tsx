@@ -3,40 +3,13 @@ import React, { useState, useEffect } from "react";
 import Calendar from "@/components/Calendar";
 import MemberList from "@/components/MemberList";
 import StatisticsTable from "@/components/StatisticsTable";
-import { Member, CalendarDay } from "@/utils/schedulerUtils";
+import { Member, CalendarDay, getAprilTuesdaysAndFridays } from "@/utils/schedulerUtils";
 import { fetchUsers, fetchDayParticipants } from "@/utils/apiUtils";
 import { toast } from "sonner";
 
-// Generate example schedule data - this would come from backend in a real app
-const generateInitialDays = (): CalendarDay[] => {
-  const days = [];
-  const april2024 = new Date(2024, 3, 1); // April is month 3 (0-indexed)
-  
-  // Add entries for Mondays, Wednesdays, and Fridays in April
-  for (let i = 0; i < 30; i++) {
-    const currentDate = new Date(april2024);
-    currentDate.setDate(april2024.getDate() + i);
-    
-    // Check if day is Monday (1), Wednesday (3), or Friday (5)
-    const dayOfWeek = currentDate.getDay();
-    if (dayOfWeek === 1 || dayOfWeek === 3 || dayOfWeek === 5) {
-      days.push({
-        id: `april2024-${i+1}`, // Unique ID for each day
-        date: currentDate.toISOString(),
-        dayOfWeek,
-        isActive: true,
-        maxMembers: 8,
-        members: []
-      });
-    }
-  }
-  
-  return days;
-};
-
 const Index = () => {
   const [members, setMembers] = useState<Member[]>([]);
-  const [days, setDays] = useState<CalendarDay[]>(generateInitialDays());
+  const [days, setDays] = useState<CalendarDay[]>(getAprilTuesdaysAndFridays());
   const [loading, setLoading] = useState(true);
 
   // Fetch users and day participants on component mount

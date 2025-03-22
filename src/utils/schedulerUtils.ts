@@ -18,26 +18,26 @@ export interface CalendarDay {
   sessionTime: string;
 }
 
-// Get all Tuesdays and Fridays in April 2024
+// Get all Tuesdays and Fridays in April 2025
 export const getAprilTuesdaysAndFridays = (): CalendarDay[] => {
   const days: CalendarDay[] = [];
-  const april2024 = new Date(2024, 3, 1); // April is month 3 (0-indexed)
+  const april2025 = new Date(2025, 3, 1); // April is month 3 (0-indexed)
   
-  // Add entries for Mondays, Wednesdays, and Fridays in April
+  // Add entries for Tuesdays (2) and Fridays (5) in April
   for (let i = 0; i < 30; i++) {
-    const currentDate = new Date(april2024);
-    currentDate.setDate(april2024.getDate() + i);
+    const currentDate = new Date(april2025);
+    currentDate.setDate(april2025.getDate() + i);
     
-    // Check if day is Monday (1), Wednesday (3), or Friday (5)
+    // Check if day is Tuesday (2) or Friday (5)
     const dayOfWeek = currentDate.getDay();
     if (dayOfWeek === 2 || dayOfWeek === 5) { // Tuesday (2) and Friday (5)
       days.push({
-        id: `april2024-${i+1}`,
+        id: `april2025-${i+1}`,
         date: currentDate.toISOString(),
         dayOfWeek,
         isActive: true,
         members: [],
-        maxMembers: 10, // Updated default to 10
+        maxMembers: 10, // Default max members
         sessionCost: 260000, // Default cost per session
         sessionTime: "19:00-21:00" // Default time
       });
