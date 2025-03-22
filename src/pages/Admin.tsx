@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { fetchBadmintonSettings, updateBadmintonSettings, generateBadmintonDays } from "@/utils/apiUtils";
 
 const createUserSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -33,13 +34,13 @@ type CreateUserFormValues = z.infer<typeof createUserSchema>;
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
 const dayOptions = [
+  { value: "0", label: "Chủ nhật" },
   { value: "1", label: "Thứ 2" },
   { value: "2", label: "Thứ 3" },
   { value: "3", label: "Thứ 4" },
   { value: "4", label: "Thứ 5" },
   { value: "5", label: "Thứ 6" },
   { value: "6", label: "Thứ 7" },
-  { value: "0", label: "Chủ nhật" },
 ];
 
 const Admin = () => {
@@ -72,8 +73,27 @@ const Admin = () => {
   useEffect(() => {
     if (profile?.is_admin) {
       fetchUsers();
+      loadBadmintonSettings();
     }
   }, [profile]);
+
+  const loadBadmintonSettings = async () => {
+    try {
+      const settings = await fetchBadmintonSettings();
+      if (settings) {
+        // Convert settings to form values
+        settingsForm.reset({
+          sessionPrice: settings.session_price.toString(),
+          maxMembers: settings.max_members.toString(),
+          playDays: settings.play_days.map(day => day.toString()),
+          playTime: settings.play_time,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+      toast.error("Không thể tải cài đặt");
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -147,11 +167,25 @@ const Admin = () => {
   const handleSaveSettings = async (data: SettingsFormValues) => {
     setSettingsLoading(true);
     try {
-      // This would update application settings in a real app
-      // For now we'll just simulate success
-      toast.success("Cài đặt đã được lưu", {
-        description: "Thay đổi sẽ được áp dụng cho các buổi tập sắp tới"
+      // Update the settings in the database
+      const success = await updateBadmintonSettings({
+        session_price: parseInt(data.sessionPrice),
+        max_members: parseInt(data.maxMembers),
+        play_days: data.playDays.map(day => parseInt(day)),
+        play_time: data.playTime,
       });
+      
+      if (success) {
+        toast.success("Cài đặt đã được lưu", {
+          description: "Thay đổi sẽ được áp dụng cho các buổi tập sắp tới"
+        });
+        
+        // Generate badminton days for the current month to apply the new settings
+        const currentDate = new Date();
+        await generateBadmintonDays(currentDate.getFullYear(), currentDate.getMonth() + 1);
+      } else {
+        toast.error("Có lỗi xảy ra khi lưu cài đặt");
+      }
     } catch (error) {
       console.error("Error saving settings:", error);
       toast.error("Có lỗi xảy ra khi lưu cài đặt");

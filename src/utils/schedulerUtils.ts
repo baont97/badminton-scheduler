@@ -18,7 +18,8 @@ export interface CalendarDay {
   sessionTime: string;
 }
 
-// Get all Tuesdays and Fridays in April 2025
+// Get all Tuesdays and Fridays in April 2025 - this is kept for backwards compatibility
+// but will be replaced with dynamic data from the database
 export const getAprilTuesdaysAndFridays = (): CalendarDay[] => {
   const days: CalendarDay[] = [];
   const april2025 = new Date(2025, 3, 1); // April is month 3 (0-indexed)

@@ -9,6 +9,42 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      badminton_days: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          date: string
+          day_of_week: number
+          id: string
+          is_active: boolean
+          max_members: number
+          session_cost: number
+          session_time: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          date: string
+          day_of_week: number
+          id?: string
+          is_active?: boolean
+          max_members?: number
+          session_cost?: number
+          session_time?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          day_of_week?: number
+          id?: string
+          is_active?: boolean
+          max_members?: number
+          session_cost?: number
+          session_time?: string
+        }
+        Relationships: []
+      }
       badminton_participants: {
         Row: {
           created_at: string | null
@@ -27,6 +63,36 @@ export type Database = {
           day_id?: string
           id?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      badminton_settings: {
+        Row: {
+          id: string
+          max_members: number
+          play_days: number[]
+          play_time: string
+          session_price: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          max_members?: number
+          play_days?: number[]
+          play_time?: string
+          session_price?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          max_members?: number
+          play_days?: number[]
+          play_time?: string
+          session_price?: number
+          updated_at?: string
+          updated_by?: string | null
         }
         Relationships: []
       }
@@ -77,7 +143,32 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_badminton_days: {
+        Args: {
+          _year: number
+          _month: number
+        }
+        Returns: {
+          created_at: string
+          created_by: string | null
+          date: string
+          day_of_week: number
+          id: string
+          is_active: boolean
+          max_members: number
+          session_cost: number
+          session_time: string
+        }[]
+      }
+      update_badminton_settings: {
+        Args: {
+          _session_price: number
+          _max_members: number
+          _play_days: number[]
+          _play_time: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

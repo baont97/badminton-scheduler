@@ -17,14 +17,22 @@ interface CalendarProps {
   days: CalendarDay[];
   members: Member[];
   onUpdateDays: (days: CalendarDay[]) => void;
+  currentMonth: number;
+  currentYear: number;
+  onChangeMonth: (month: number, year: number) => void;
 }
 
-const Calendar: React.FC<CalendarProps> = ({ days, members, onUpdateDays }) => {
+const Calendar: React.FC<CalendarProps> = ({ 
+  days, 
+  members, 
+  onUpdateDays, 
+  currentMonth, 
+  currentYear, 
+  onChangeMonth 
+}) => {
   const [loading, setLoading] = useState(false);
   const { user, profile } = useAuth();
   const isAdmin = profile?.is_admin === true;
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
   // Filter days to current month only unless admin
   const filteredDays = days.filter(day => {
@@ -32,9 +40,7 @@ const Calendar: React.FC<CalendarProps> = ({ days, members, onUpdateDays }) => {
     if (!isAdmin) {
       // For non-admins, only show current month and future dates
       const today = new Date();
-      return dayDate.getMonth() === currentMonth && 
-             dayDate.getFullYear() === currentYear &&
-             dayDate >= new Date(today.setHours(0, 0, 0, 0));
+      return dayDate >= new Date(today.setHours(0, 0, 0, 0));
     }
     // Admins can see all days
     return true;
@@ -123,6 +129,31 @@ const Calendar: React.FC<CalendarProps> = ({ days, members, onUpdateDays }) => {
     toast.info("Đã ghi nhận yêu cầu nhường slot, vui lòng chờ xác nhận");
   };
 
+  // Handle month navigation
+  const handlePreviousMonth = () => {
+    let newMonth = currentMonth - 1;
+    let newYear = currentYear;
+    
+    if (newMonth < 1) {
+      newMonth = 12;
+      newYear -= 1;
+    }
+    
+    onChangeMonth(newMonth, newYear);
+  };
+
+  const handleNextMonth = () => {
+    let newMonth = currentMonth + 1;
+    let newYear = currentYear;
+    
+    if (newMonth > 12) {
+      newMonth = 1;
+      newYear += 1;
+    }
+    
+    onChangeMonth(newMonth, newYear);
+  };
+
   // Auto-add core members to all days
   useEffect(() => {
     const coreMembers = members.filter(member => member.isCore).map(member => member.id);
@@ -147,160 +178,171 @@ const Calendar: React.FC<CalendarProps> = ({ days, members, onUpdateDays }) => {
     }
   }, [members]);
 
+  // Get Vietnamese month name
+  const getMonthName = (month: number) => {
+    return `Tháng ${month}`;
+  };
+
   return (
     <div className="glass-card p-6 animate-fade-in">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-medium text-center">Lịch Đánh Cầu Tháng {currentMonth + 1}/{currentYear}</h2>
+        <h2 className="text-lg font-medium text-center">Lịch Đánh Cầu {getMonthName(currentMonth)}/{currentYear}</h2>
         <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => {
-              const newDate = new Date(currentYear, currentMonth - 1);
-              setCurrentMonth(newDate.getMonth());
-              setCurrentYear(newDate.getFullYear());
-            }}
-            disabled={!isAdmin && (currentMonth <= new Date().getMonth() && currentYear <= new Date().getFullYear())}
+            onClick={handlePreviousMonth}
+            disabled={!isAdmin && (
+              new Date().getMonth() + 1 === currentMonth && 
+              new Date().getFullYear() === currentYear
+            )}
           >
             Tháng trước
           </Button>
           <Button 
             variant="outline" 
             size="sm" 
-            onClick={() => {
-              const newDate = new Date(currentYear, currentMonth + 1);
-              setCurrentMonth(newDate.getMonth());
-              setCurrentYear(newDate.getFullYear());
-            }}
+            onClick={handleNextMonth}
           >
             Tháng sau
           </Button>
         </div>
       </div>
       
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredDays.map((day, dayIndex) => {
-          const isParticipating = isUserParticipating(day);
-          const isPast = isPastDay(day.date);
-          const userCore = isUserCore();
-          
-          return (
-            <div 
-              key={dayIndex}
-              className={`calendar-day p-4 ${day.isActive ? 'calendar-day-active' : 'bg-gray-100'} 
-                ${isPast ? 'opacity-70' : ''}`}
-            >
-              <div className="flex justify-between items-center mb-3">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-badminton text-white">
-                  {getDayName(day.dayOfWeek)}
-                </span>
-                <span className="text-sm font-semibold">{formatDate(day.date)}</span>
-              </div>
-              
-              <div className="mb-2">
-                <p className="text-xs text-muted-foreground">
-                  {day.members.length}/{day.maxMembers} người tham gia
-                </p>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                  <div 
-                    className="bg-badminton h-1.5 rounded-full transition-all duration-300 ease-out"
-                    style={{ width: `${(day.members.length / day.maxMembers) * 100}%` }}
-                  ></div>
+      {filteredDays.length === 0 ? (
+        <div className="p-8 text-center text-muted-foreground border border-dashed rounded-lg">
+          <p>Không có lịch đánh cầu nào trong tháng này</p>
+          {isAdmin && (
+            <p className="mt-2 text-sm">
+              Bạn có thể thiết lập lịch đánh cầu trong phần Cài đặt ở trang Admin
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {filteredDays.map((day, dayIndex) => {
+            const isParticipating = isUserParticipating(day);
+            const isPast = isPastDay(day.date);
+            const userCore = isUserCore();
+            
+            return (
+              <div 
+                key={dayIndex}
+                className={`calendar-day p-4 ${day.isActive ? 'calendar-day-active' : 'bg-gray-100'} 
+                  ${isPast ? 'opacity-70' : ''}`}
+              >
+                <div className="flex justify-between items-center mb-3">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-badminton text-white">
+                    {getDayName(day.dayOfWeek)}
+                  </span>
+                  <span className="text-sm font-semibold">{formatDate(day.date)}</span>
                 </div>
-              </div>
+                
+                <div className="mb-2">
+                  <p className="text-xs text-muted-foreground">
+                    {day.members.length}/{day.maxMembers} người tham gia
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                    <div 
+                      className="bg-badminton h-1.5 rounded-full transition-all duration-300 ease-out"
+                      style={{ width: `${(day.members.length / day.maxMembers) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
 
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium">Người tham gia:</h3>
-                {day.members.length > 0 ? (
-                  day.members.map(memberId => {
-                    const memberData = members.find(m => m.id === memberId);
-                    if (!memberData) return null;
-                    
-                    return (
-                      <div 
-                        key={memberId}
-                        className="flex items-center justify-between p-2 rounded-lg bg-badminton bg-opacity-10"
-                      >
-                        <div className="flex items-center">
-                          <div className="w-6 h-6 rounded-full bg-badminton flex items-center justify-center text-white text-xs mr-2">
-                            {memberData.name.charAt(0)}
+                <div className="space-y-2">
+                  <h3 className="text-sm font-medium">Người tham gia:</h3>
+                  {day.members.length > 0 ? (
+                    day.members.map(memberId => {
+                      const memberData = members.find(m => m.id === memberId);
+                      if (!memberData) return null;
+                      
+                      return (
+                        <div 
+                          key={memberId}
+                          className="flex items-center justify-between p-2 rounded-lg bg-badminton bg-opacity-10"
+                        >
+                          <div className="flex items-center">
+                            <div className="w-6 h-6 rounded-full bg-badminton flex items-center justify-center text-white text-xs mr-2">
+                              {memberData.name.charAt(0)}
+                            </div>
+                            <span className="text-sm">
+                              {memberData.name}
+                            </span>
                           </div>
-                          <span className="text-sm">
-                            {memberData.name}
-                          </span>
+                          {memberData.isCore && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="p-1">
+                                  <Star className="h-3 w-3 text-badminton" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Thành viên cứng</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
                         </div>
-                        {memberData.isCore && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span className="p-1">
-                                <Star className="h-3 w-3 text-badminton" />
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Thành viên cứng</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="text-sm text-muted-foreground italic">Chưa có người tham gia</p>
-                )}
-              </div>
-
-              {user && (
-                <div className="mt-4 space-y-2">
-                  {isParticipating ? (
-                    <div className="flex flex-col gap-2">
-                      <Button 
-                        variant="outline" 
-                        size="sm"
-                        className="w-full border-red-500 text-red-500 hover:bg-red-50"
-                        onClick={() => handleToggleParticipation(dayIndex)}
-                        disabled={loading || (isPast && !isAdmin) || (userCore && !isAdmin)}
-                      >
-                        <X className="h-4 w-4 mr-1" /> Hủy tham gia
-                      </Button>
-                      
-                      {userCore && !isPast && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="w-full"
-                          onClick={() => handleGiveUpSlot(day.id)}
-                        >
-                          <Star className="h-4 w-4 mr-1" /> Nhường slot
-                        </Button>
-                      )}
-                      
-                      {!userCore && !isPast && (
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          className="w-full border-green-500 text-green-500 hover:bg-green-50"
-                          onClick={() => handlePaymentUpload(day.id)}
-                        >
-                          <Upload className="h-4 w-4 mr-1" /> Tải lên thanh toán
-                        </Button>
-                      )}
-                    </div>
+                      );
+                    })
                   ) : (
-                    <Button 
-                      className="w-full bg-badminton hover:bg-badminton/80"
-                      size="sm"
-                      onClick={() => handleToggleParticipation(dayIndex)}
-                      disabled={loading || (isPast && !isAdmin) || day.members.length >= day.maxMembers}
-                    >
-                      <CalendarIcon className="h-4 w-4 mr-1" /> Tham gia
-                    </Button>
+                    <p className="text-sm text-muted-foreground italic">Chưa có người tham gia</p>
                   )}
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+
+                {user && (
+                  <div className="mt-4 space-y-2">
+                    {isParticipating ? (
+                      <div className="flex flex-col gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          className="w-full border-red-500 text-red-500 hover:bg-red-50"
+                          onClick={() => handleToggleParticipation(dayIndex)}
+                          disabled={loading || (isPast && !isAdmin) || (userCore && !isAdmin)}
+                        >
+                          <X className="h-4 w-4 mr-1" /> Hủy tham gia
+                        </Button>
+                        
+                        {userCore && !isPast && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="w-full"
+                            onClick={() => handleGiveUpSlot(day.id)}
+                          >
+                            <Star className="h-4 w-4 mr-1" /> Nhường slot
+                          </Button>
+                        )}
+                        
+                        {!userCore && !isPast && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="w-full border-green-500 text-green-500 hover:bg-green-50"
+                            onClick={() => handlePaymentUpload(day.id)}
+                          >
+                            <Upload className="h-4 w-4 mr-1" /> Tải lên thanh toán
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <Button 
+                        className="w-full bg-badminton hover:bg-badminton/80"
+                        size="sm"
+                        onClick={() => handleToggleParticipation(dayIndex)}
+                        disabled={loading || (isPast && !isAdmin) || day.members.length >= day.maxMembers}
+                      >
+                        <CalendarIcon className="h-4 w-4 mr-1" /> Tham gia
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
