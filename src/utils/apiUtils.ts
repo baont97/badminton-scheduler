@@ -155,7 +155,10 @@ export async function updateBadmintonSettings(settings: {
       }
     );
     
-    if (error) throw error;
+    if (error) {
+      console.error("Error details:", error);
+      throw error;
+    }
     
     return data;
   } catch (error) {
