@@ -2,45 +2,46 @@
 import { toast } from "sonner";
 
 export interface Member {
-  id: string; // Changed from number to string to match Supabase UUIDs
+  id: string;
   name: string;
   isCore: boolean;
 }
 
 export interface CalendarDay {
-  id: string; // Added id field for the CalendarDay type
-  date: string; // Changed from Date to string for ISO format
+  id: string;
+  date: string;
   dayOfWeek: number;
   isActive: boolean;
-  members: string[]; // Changed from number[] to string[] to match Member id type
+  members: string[];
   maxMembers: number;
+  sessionCost: number;
+  sessionTime: string;
 }
 
 // Get all Tuesdays and Fridays in April 2024
 export const getAprilTuesdaysAndFridays = (): CalendarDay[] => {
   const days: CalendarDay[] = [];
-  const year = 2024;
-  const month = 3; // April is 3 (0-indexed)
+  const april2024 = new Date(2024, 3, 1); // April is month 3 (0-indexed)
   
-  // Get all days in April
-  const date = new Date(year, month, 1);
-  
-  while (date.getMonth() === month) {
-    const dayOfWeek = date.getDay();
+  // Add entries for Mondays, Wednesdays, and Fridays in April
+  for (let i = 0; i < 30; i++) {
+    const currentDate = new Date(april2024);
+    currentDate.setDate(april2024.getDate() + i);
     
-    // 2 is Tuesday, 5 is Friday
-    if (dayOfWeek === 2 || dayOfWeek === 5) {
+    // Check if day is Monday (1), Wednesday (3), or Friday (5)
+    const dayOfWeek = currentDate.getDay();
+    if (dayOfWeek === 2 || dayOfWeek === 5) { // Tuesday (2) and Friday (5)
       days.push({
-        id: `april-${date.getDate()}`,
-        date: date.toISOString(),
+        id: `april2024-${i+1}`,
+        date: currentDate.toISOString(),
         dayOfWeek,
         isActive: true,
         members: [],
-        maxMembers: 8
+        maxMembers: 10, // Updated default to 10
+        sessionCost: 260000, // Default cost per session
+        sessionTime: "19:00-21:00" // Default time
       });
     }
-    
-    date.setDate(date.getDate() + 1);
   }
   
   return days;
@@ -54,7 +55,7 @@ export const generateMembers = (): Member[] => {
   ];
   
   return names.map((name, index) => ({
-    id: `${index + 1}`, // Convert to string
+    id: `${index + 1}`,
     name,
     isCore: index < 3 // First 3 members are core members
   }));
@@ -63,7 +64,7 @@ export const generateMembers = (): Member[] => {
 // Calculate cost per person per day
 export const calculateCostPerPerson = (
   days: CalendarDay[], 
-  memberId: string // Changed from number to string
+  memberId: string
 ): { totalDays: number; totalCost: number } => {
   const participatingDays = days.filter(day => 
     day.isActive && day.members.includes(memberId)
@@ -73,8 +74,8 @@ export const calculateCostPerPerson = (
   
   participatingDays.forEach(day => {
     if (day.members.length > 0) {
-      // 260,000 VND per session divided by number of participants
-      const costPerPerson = 260000 / day.members.length;
+      // Default is 260,000 VND per session divided by number of participants
+      const costPerPerson = (day.sessionCost || 260000) / day.members.length;
       totalCost += costPerPerson;
     }
   });
@@ -89,7 +90,7 @@ export const calculateCostPerPerson = (
 export const addMemberToDay = (
   days: CalendarDay[],
   dayIndex: number,
-  memberId: string // Changed from number to string
+  memberId: string
 ): CalendarDay[] => {
   const updatedDays = [...days];
   const day = updatedDays[dayIndex];
@@ -113,7 +114,7 @@ export const addMemberToDay = (
 export const removeMemberFromDay = (
   days: CalendarDay[],
   dayIndex: number,
-  memberId: string // Changed from number to string
+  memberId: string
 ): CalendarDay[] => {
   const updatedDays = [...days];
   const day = updatedDays[dayIndex];

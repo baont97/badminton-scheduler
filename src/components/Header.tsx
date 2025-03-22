@@ -29,7 +29,7 @@ const Header: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link to="/" className="font-bold text-xl text-badminton">
-              Badminton Scheduler
+              Cầu lông - 320 Trường chinh
             </Link>
           </div>
 
@@ -57,8 +57,8 @@ const Header: React.FC = () => {
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                     {isAdmin && (
                       <div className="mt-1">
-                        <span className="text-xs bg-badminton/20 text-badminton px-2 py-0.5 rounded-full">
-                          Quản trị viên
+                        <span className="text-xs bg-badminton/20 text-badminton px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Shield className="h-3 w-3" /> Quản trị viên
                         </span>
                       </div>
                     )}

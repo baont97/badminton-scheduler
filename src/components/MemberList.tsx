@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { fetchUsers, toggleCoreMember, isCurrentUserAdmin } from "@/utils/apiUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, Info } from "lucide-react";
+import { ShieldCheck, Info, Star } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -70,12 +70,11 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
             <Tooltip>
               <TooltipTrigger asChild>
                 <Badge variant="outline" className="flex items-center gap-1 border-badminton text-badminton">
-                  <ShieldCheck className="h-3 w-3" />
-                  <span>Quyền Admin</span>
+                  <ShieldCheck className="h-4 w-4" />
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Bạn có thể thay đổi trạng thái thành viên cứng</p>
+                <p>Bạn có quyền Admin</p>
               </TooltipContent>
             </Tooltip>
           )}
@@ -97,9 +96,16 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
               </div>
               <span className="font-medium">{member.name}</span>
               {member.isCore && (
-                <Badge variant="secondary" className="bg-badminton-light text-badminton-dark">
-                  Thành viên cứng
-                </Badge>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="secondary" className="bg-badminton-light text-badminton-dark p-1">
+                      <Star className="h-3 w-3 text-badminton" />
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Thành viên cứng</p>
+                  </TooltipContent>
+                </Tooltip>
               )}
             </div>
             
