@@ -66,9 +66,9 @@ const Calendar: React.FC<CalendarProps> = ({
     
     const day = filteredDays[dayIndex];
     
-    // Check if the day is in the past
-    if (isPastDay(day.date) && !isAdmin) {
-      toast.error("Không thể thay đổi tham gia cho ngày đã qua");
+    // Check if the day is in the past or not active
+    if ((isPastDay(day.date) || !day.isActive) && !isAdmin) {
+      toast.error("Không thể thay đổi tham gia cho ngày này");
       return;
     }
     
@@ -77,7 +77,7 @@ const Calendar: React.FC<CalendarProps> = ({
     // Check core member status
     const member = members.find(m => m.id === user.id);
     if (isMemberInDay && member?.isCore) {
-      toast.error("Thành viên cứng không thể hủy tham gia, chỉ có thể nhường slot");
+      toast.error("Thành viên cứng không thể hủy tham gia");
       return;
     }
     
@@ -122,11 +122,6 @@ const Calendar: React.FC<CalendarProps> = ({
   const handlePaymentUpload = (dayId: string) => {
     // This would be replaced with actual file upload logic
     toast.success("Đã ghi nhận thanh toán, chờ xác nhận từ admin");
-  };
-
-  // Mock function to handle core member giving up their slot
-  const handleGiveUpSlot = (dayId: string) => {
-    toast.info("Đã ghi nhận yêu cầu nhường slot, vui lòng chờ xác nhận");
   };
 
   // Handle month navigation
@@ -224,15 +219,16 @@ const Calendar: React.FC<CalendarProps> = ({
             const isParticipating = isUserParticipating(day);
             const isPast = isPastDay(day.date);
             const userCore = isUserCore();
+            const isDisabled = !day.isActive || (isPast && !isAdmin);
             
             return (
               <div 
                 key={dayIndex}
-                className={`calendar-day p-4 ${day.isActive ? 'calendar-day-active' : 'bg-gray-100'} 
-                  ${isPast ? 'opacity-70' : ''}`}
+                className={`calendar-day p-4 ${day.isActive ? 'calendar-day-active' : 'bg-gray-200'} 
+                  ${isDisabled ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
                 <div className="flex justify-between items-center mb-3">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-badminton text-white">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${day.isActive ? 'bg-badminton text-white' : 'bg-gray-400 text-white'}`}>
                     {getDayName(day.dayOfWeek)}
                   </span>
                   <span className="text-sm font-semibold">{formatDate(day.date)}</span>
@@ -244,7 +240,7 @@ const Calendar: React.FC<CalendarProps> = ({
                   </p>
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                     <div 
-                      className="bg-badminton h-1.5 rounded-full transition-all duration-300 ease-out"
+                      className={`h-1.5 rounded-full transition-all duration-300 ease-out ${day.isActive ? 'bg-badminton' : 'bg-gray-400'}`}
                       style={{ width: `${(day.members.length / day.maxMembers) * 100}%` }}
                     ></div>
                   </div>
@@ -271,16 +267,18 @@ const Calendar: React.FC<CalendarProps> = ({
                             </span>
                           </div>
                           {memberData.isCore && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="p-1">
-                                  <Star className="h-3 w-3 text-badminton" />
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Thành viên cứng</p>
-                              </TooltipContent>
-                            </Tooltip>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="p-1">
+                                    <Star className="h-3 w-3 text-badminton" />
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>Thành viên cứng</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           )}
                         </div>
                       );
@@ -299,23 +297,12 @@ const Calendar: React.FC<CalendarProps> = ({
                           size="sm"
                           className="w-full border-red-500 text-red-500 hover:bg-red-50"
                           onClick={() => handleToggleParticipation(dayIndex)}
-                          disabled={loading || (isPast && !isAdmin) || (userCore && !isAdmin)}
+                          disabled={loading || isDisabled || (userCore && !isAdmin)}
                         >
                           <X className="h-4 w-4 mr-1" /> Hủy tham gia
                         </Button>
                         
-                        {userCore && !isPast && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="w-full"
-                            onClick={() => handleGiveUpSlot(day.id)}
-                          >
-                            <Star className="h-4 w-4 mr-1" /> Nhường slot
-                          </Button>
-                        )}
-                        
-                        {!userCore && !isPast && (
+                        {!userCore && !isDisabled && (
                           <Button 
                             variant="outline" 
                             size="sm"
@@ -328,10 +315,10 @@ const Calendar: React.FC<CalendarProps> = ({
                       </div>
                     ) : (
                       <Button 
-                        className="w-full bg-badminton hover:bg-badminton/80"
+                        className={`w-full ${day.isActive ? 'bg-badminton hover:bg-badminton/80' : 'bg-gray-400 hover:bg-gray-500'}`}
                         size="sm"
                         onClick={() => handleToggleParticipation(dayIndex)}
-                        disabled={loading || (isPast && !isAdmin) || day.members.length >= day.maxMembers}
+                        disabled={loading || isDisabled || day.members.length >= day.maxMembers}
                       >
                         <CalendarIcon className="h-4 w-4 mr-1" /> Tham gia
                       </Button>
