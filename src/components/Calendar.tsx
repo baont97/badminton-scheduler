@@ -197,25 +197,39 @@ const Calendar: React.FC<CalendarProps> = ({
   useEffect(() => {
     const coreMembers = members.filter(member => member.isCore).map(member => member.id);
     
+    if (coreMembers.length === 0) return;
+    
     let needsUpdate = false;
     const updatedDays = days.map(day => {
       const missingCoreMembers = coreMembers.filter(id => !day.members.includes(id));
       
       if (missingCoreMembers.length > 0) {
         needsUpdate = true;
-        return {
+        
+        // Add missing core members to this day
+        const updatedDay = {
           ...day,
           members: [...day.members, ...missingCoreMembers]
         };
+        
+        // Automatically update the database for each core member
+        missingCoreMembers.forEach(memberId => {
+          // We need to call the API to add them to the database, but don't wait for it
+          toggleParticipation(day.id, memberId, false)
+            .catch(error => console.error(`Error auto-adding core member ${memberId} to day ${day.id}:`, error));
+        });
+        
+        return updatedDay;
       }
       
       return day;
     });
     
     if (needsUpdate) {
+      console.log("Auto-adding core members to days");
       onUpdateDays(updatedDays);
     }
-  }, [members]);
+  }, [days, members]);
 
   // Get Vietnamese month name
   const getMonthName = (month: number) => {
