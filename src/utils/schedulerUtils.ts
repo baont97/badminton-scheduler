@@ -39,6 +39,7 @@ export const getAprilTuesdaysAndFridays = (): CalendarDay[] => {
         dayOfWeek,
         isActive: true,
         members: [],
+        paidMembers: [], // Add empty paidMembers array
         maxMembers: 10, // Default max members
         sessionCost: 260000, // Default cost per session
         sessionTime: "19:00-21:00" // Default time
