@@ -3,6 +3,7 @@ import React, { useEffect } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -23,8 +24,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, adminOnly = f
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="glass-card p-8 animate-pulse">
-          <p className="text-xl font-light text-muted-foreground">Đang tải...</p>
+        <div className="glass-card p-8 space-y-4 w-full max-w-md">
+          <Skeleton className="h-8 w-3/4 mx-auto mb-4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-10 w-full mt-6" />
         </div>
       </div>
     );

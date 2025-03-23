@@ -2,6 +2,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AuthContextProps {
   session: Session | null;
@@ -23,17 +24,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+      async (event, newSession) => {
+        console.log("Auth state changed:", event, !!newSession);
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
         
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-        } else {
-          setProfile(null);
-        }
-
-        if (event === 'SIGNED_OUT') {
+        if (newSession?.user) {
+          await fetchProfile(newSession.user.id);
+        } else if (event === 'SIGNED_OUT') {
           setProfile(null);
         }
       }
@@ -42,17 +40,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // THEN check for existing session
     const initializeAuth = async () => {
       try {
-        setLoading(true);
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session: existingSession }, error } = await supabase.auth.getSession();
         
-        setSession(session);
-        setUser(session?.user ?? null);
+        if (error) {
+          console.error("Error getting session:", error);
+          toast.error("Không thể kết nối với hệ thống xác thực");
+          setLoading(false);
+          return;
+        }
         
-        if (session?.user) {
-          await fetchProfile(session.user.id);
+        console.log("Initial session check:", !!existingSession);
+        setSession(existingSession);
+        setUser(existingSession?.user ?? null);
+        
+        if (existingSession?.user) {
+          await fetchProfile(existingSession.user.id);
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
+        toast.error("Đã xảy ra lỗi khi khởi tạo xác thực");
       } finally {
         setLoading(false);
       }
@@ -93,8 +99,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
+      toast.success("Đăng xuất thành công");
     } catch (error) {
       console.error("Error signing out:", error);
+      toast.error("Lỗi khi đăng xuất");
     }
   };
 
