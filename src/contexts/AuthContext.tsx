@@ -51,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn("Auth initialization timed out after 10 seconds");
         setLoading(false);
       }
-    }, 10000);
+    }, 30000);
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
