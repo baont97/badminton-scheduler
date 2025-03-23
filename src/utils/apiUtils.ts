@@ -77,16 +77,19 @@ export async function toggleCoreMember(userId: string, isCore: boolean): Promise
 }
 
 // Fetch participants for a specific day
-export async function fetchDayParticipants(dayId: string): Promise<string[]> {
+export async function fetchDayParticipants(dayId: string): Promise<{ userId: string, hasPaid: boolean }[]> {
   try {
     const { data, error } = await supabase
       .from("badminton_participants")
-      .select("user_id")
+      .select("user_id, has_paid")
       .eq("day_id", dayId);
       
     if (error) throw error;
     
-    return data.map(participant => participant.user_id);
+    return data.map(participant => ({
+      userId: participant.user_id,
+      hasPaid: participant.has_paid || false
+    }));
   } catch (error) {
     console.error("Error fetching day participants:", error);
     return [];
@@ -109,12 +112,33 @@ export async function toggleParticipation(dayId: string, userId: string, isParti
       // Add participation
       const { error } = await supabase
         .from("badminton_participants")
-        .insert({ day_id: dayId, user_id: userId });
+        .insert({ 
+          day_id: dayId, 
+          user_id: userId,
+          has_paid: false 
+        });
         
       return !error;
     }
   } catch (error) {
     console.error("Error toggling participation:", error);
+    return false;
+  }
+}
+
+// Mark payment status for a participant
+export async function markPaymentStatus(dayId: string, userId: string, hasPaid: boolean): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("badminton_participants")
+      .update({ has_paid: hasPaid })
+      .eq("day_id", dayId)
+      .eq("user_id", userId);
+      
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error updating payment status:", error);
     return false;
   }
 }
@@ -211,7 +235,8 @@ export async function fetchBadmintonDays(year: number, month: number): Promise<C
           date: new Date(day.date).toISOString(),
           dayOfWeek: day.day_of_week,
           isActive: day.is_active,
-          members: participants,
+          members: participants.map(p => p.userId),
+          paidMembers: participants.filter(p => p.hasPaid).map(p => p.userId),
           maxMembers: day.max_members,
           sessionCost: day.session_cost,
           sessionTime: day.session_time

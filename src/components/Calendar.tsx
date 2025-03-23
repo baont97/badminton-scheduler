@@ -2,16 +2,17 @@
 import React, { useState, useEffect } from "react";
 import { CalendarDay, Member, getDayName, formatDate } from "@/utils/schedulerUtils";
 import { toast } from "sonner";
-import { fetchDayParticipants, toggleParticipation } from "@/utils/apiUtils";
+import { fetchDayParticipants, toggleParticipation, markPaymentStatus } from "@/utils/apiUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Check, X, Star, Calendar as CalendarIcon, Upload } from "lucide-react";
+import { Check, X, Star, Calendar as CalendarIcon, CreditCard } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface CalendarProps {
   days: CalendarDay[];
@@ -52,6 +53,10 @@ const Calendar: React.FC<CalendarProps> = ({
 
   const isUserParticipating = (day: CalendarDay): boolean => {
     return user ? day.members.includes(user.id) : false;
+  };
+
+  const hasUserPaid = (day: CalendarDay): boolean => {
+    return user ? day.paidMembers.includes(user.id) : false;
   };
 
   const isUserCore = (): boolean => {
@@ -100,7 +105,8 @@ const Calendar: React.FC<CalendarProps> = ({
         // Remove member from day
         updatedDays[actualDayIndex] = {
           ...days[actualDayIndex],
-          members: days[actualDayIndex].members.filter(id => id !== user.id)
+          members: days[actualDayIndex].members.filter(id => id !== user.id),
+          paidMembers: days[actualDayIndex].paidMembers.filter(id => id !== user.id)
         };
       } else {
         // Add member to day
@@ -118,10 +124,48 @@ const Calendar: React.FC<CalendarProps> = ({
     setLoading(false);
   };
 
-  // Mock function to handle payment uploads - would be connected to real API
-  const handlePaymentUpload = (dayId: string) => {
-    // This would be replaced with actual file upload logic
-    toast.success("Đã ghi nhận thanh toán, chờ xác nhận từ admin");
+  // Handle payment status
+  const handleTogglePaymentStatus = async (dayId: string) => {
+    if (!user) {
+      toast.error("Vui lòng đăng nhập để thanh toán");
+      return;
+    }
+    
+    const dayIndex = days.findIndex(d => d.id === dayId);
+    if (dayIndex === -1) return;
+    
+    const day = days[dayIndex];
+    const hasAlreadyPaid = day.paidMembers.includes(user.id);
+    
+    setLoading(true);
+    
+    const success = await markPaymentStatus(dayId, user.id, !hasAlreadyPaid);
+    
+    if (success) {
+      const updatedDays = [...days];
+      
+      if (hasAlreadyPaid) {
+        // Remove from paid members
+        updatedDays[dayIndex] = {
+          ...days[dayIndex],
+          paidMembers: days[dayIndex].paidMembers.filter(id => id !== user.id)
+        };
+        toast.success("Đã hủy trạng thái thanh toán");
+      } else {
+        // Add to paid members
+        updatedDays[dayIndex] = {
+          ...days[dayIndex],
+          paidMembers: [...days[dayIndex].paidMembers, user.id]
+        };
+        toast.success("Đã xác nhận thanh toán");
+      }
+      
+      onUpdateDays(updatedDays);
+    } else {
+      toast.error("Có lỗi xảy ra khi cập nhật trạng thái thanh toán");
+    }
+    
+    setLoading(false);
   };
 
   // Handle month navigation
@@ -217,6 +261,7 @@ const Calendar: React.FC<CalendarProps> = ({
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredDays.map((day, dayIndex) => {
             const isParticipating = isUserParticipating(day);
+            const hasPaid = hasUserPaid(day);
             const isPast = isPastDay(day.date);
             const userCore = isUserCore();
             const isDisabled = !day.isActive || (isPast && !isAdmin);
@@ -252,6 +297,7 @@ const Calendar: React.FC<CalendarProps> = ({
                     day.members.map(memberId => {
                       const memberData = members.find(m => m.id === memberId);
                       if (!memberData) return null;
+                      const memberHasPaid = day.paidMembers.includes(memberId);
                       
                       return (
                         <div 
@@ -266,20 +312,36 @@ const Calendar: React.FC<CalendarProps> = ({
                               {memberData.name}
                             </span>
                           </div>
-                          {memberData.isCore && (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="p-1">
-                                    <Star className="h-3 w-3 text-badminton" />
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Thành viên cứng</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                          )}
+                          <div className="flex items-center space-x-1">
+                            {memberHasPaid && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge variant="outline" className="bg-green-100 text-green-800 border-green-500">
+                                      <Check className="h-3 w-3 mr-1" />Đã TT
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Đã thanh toán</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {memberData.isCore && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="p-1">
+                                      <Star className="h-3 w-3 text-badminton" />
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Thành viên cứng</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                         </div>
                       );
                     })
@@ -295,23 +357,30 @@ const Calendar: React.FC<CalendarProps> = ({
                         <Button 
                           variant="outline" 
                           size="sm"
+                          className={`w-full ${hasPaid ? 'border-green-500 text-green-500 hover:bg-green-50' : 'border-badminton text-badminton hover:bg-badminton/10'}`}
+                          onClick={() => handleTogglePaymentStatus(day.id)}
+                          disabled={loading || (isPast && !isAdmin)}
+                        >
+                          {hasPaid ? (
+                            <>
+                              <Check className="h-4 w-4 mr-1" /> Đã thanh toán
+                            </>
+                          ) : (
+                            <>
+                              <CreditCard className="h-4 w-4 mr-1" /> Xác nhận thanh toán
+                            </>
+                          )}
+                        </Button>
+                        
+                        <Button 
+                          variant="outline" 
+                          size="sm"
                           className="w-full border-red-500 text-red-500 hover:bg-red-50"
                           onClick={() => handleToggleParticipation(dayIndex)}
                           disabled={loading || isDisabled || (userCore && !isAdmin)}
                         >
                           <X className="h-4 w-4 mr-1" /> Hủy tham gia
                         </Button>
-                        
-                        {!userCore && !isDisabled && (
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="w-full border-green-500 text-green-500 hover:bg-green-50"
-                            onClick={() => handlePaymentUpload(day.id)}
-                          >
-                            <Upload className="h-4 w-4 mr-1" /> Tải lên thanh toán
-                          </Button>
-                        )}
                       </div>
                     ) : (
                       <Button 

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import Calendar from "@/components/Calendar";
 import MemberList from "@/components/MemberList";
 import StatisticsTable from "@/components/StatisticsTable";
@@ -10,41 +11,32 @@ import { toast } from "sonner";
 const Index = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [days, setDays] = useState<CalendarDay[]>([]);
-  const [loading, setLoading] = useState(true);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1); // 1-indexed month
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
-  // Fetch users and day participants on component mount
+  // Use React Query for data fetching
+  const { data: userData, isLoading: usersLoading } = useQuery({
+    queryKey: ['users'],
+    queryFn: fetchUsers,
+  });
+
+  const { data: calendarData, isLoading: calendarLoading } = useQuery({
+    queryKey: ['badminton-days', currentYear, currentMonth],
+    queryFn: () => fetchBadmintonDays(currentYear, currentMonth),
+  });
+
+  // Update state when data is fetched
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        // Fetch users
-        const users = await fetchUsers();
-        setMembers(users);
-        
-        // Fetch days for the current month based on admin settings
-        const calendarDays = await fetchBadmintonDays(currentYear, currentMonth);
-        
-        // If no days were returned, use the fallback method
-        if (calendarDays.length === 0) {
-          setDays(getAprilTuesdaysAndFridays());
-          toast.warning("Không thể tải lịch từ cơ sở dữ liệu, đang sử dụng lịch mặc định");
-        } else {
-          setDays(calendarDays);
-        }
-      } catch (error) {
-        console.error("Error loading data:", error);
-        toast.error("Có lỗi xảy ra khi tải dữ liệu");
-        // Use fallback schedule as last resort
-        setDays(getAprilTuesdaysAndFridays());
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadData();
-  }, [currentMonth, currentYear]);
+    if (userData) {
+      setMembers(userData);
+    }
+  }, [userData]);
+
+  useEffect(() => {
+    if (calendarData) {
+      setDays(calendarData);
+    }
+  }, [calendarData]);
 
   // Update month/year and reload data
   const changeMonth = (month: number, year: number) => {
@@ -52,7 +44,9 @@ const Index = () => {
     setCurrentYear(year);
   };
 
-  if (loading) {
+  const isLoading = usersLoading || calendarLoading;
+
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="glass-card p-8 animate-pulse">

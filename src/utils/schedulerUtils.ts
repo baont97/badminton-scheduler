@@ -13,6 +13,7 @@ export interface CalendarDay {
   dayOfWeek: number;
   isActive: boolean;
   members: string[];
+  paidMembers: string[];
   maxMembers: number;
   sessionCost: number;
   sessionTime: string;
