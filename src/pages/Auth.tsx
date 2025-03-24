@@ -162,7 +162,7 @@ const Auth = () => {
         )}
 
         {isSignUp ? (
-          <Form {...signupForm}>
+          <Form key="sign-up" {...signupForm}>
             <form
               onSubmit={signupForm.handleSubmit(handleSignup)}
               className="space-y-4"
@@ -265,7 +265,7 @@ const Auth = () => {
             </form>
           </Form>
         ) : (
-          <Form {...loginForm}>
+          <Form key="login" {...loginForm}>
             <form
               onSubmit={loginForm.handleSubmit(handleLogin)}
               className="space-y-4"

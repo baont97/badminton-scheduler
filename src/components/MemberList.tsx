@@ -1,26 +1,27 @@
-
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Member } from "@/utils/schedulerUtils";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { fetchUsers, toggleCoreMember, isCurrentUserAdmin } from "@/utils/apiUtils";
+import { toggleCoreMember } from "@/utils/apiUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { ShieldCheck, Info, Star } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
 
 interface MemberListProps {
   members: Member[];
   onUpdateMembers: (members: Member[]) => void;
 }
 
-const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => {
+const MemberList: React.FC<MemberListProps> = ({
+  members,
+  onUpdateMembers,
+}) => {
   const [loading, setLoading] = useState(false);
   const { profile } = useAuth();
   const isAdmin = profile?.is_admin === true;
@@ -28,36 +29,38 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
   const toggleCoreMemberStatus = async (member: Member) => {
     if (!isAdmin) {
       toast.error("Bạn không có quyền quản lý thành viên cứng", {
-        description: "Chỉ admin mới có thể thay đổi trạng thái thành viên cứng"
+        description: "Chỉ admin mới có thể thay đổi trạng thái thành viên cứng",
       });
       return;
     }
-    
+
     setLoading(true);
     const success = await toggleCoreMember(member.id, member.isCore);
-    
+
     if (success) {
-      const updatedMembers = members.map(m => {
+      const updatedMembers = members.map((m) => {
         if (m.id === member.id) {
           return {
             ...m,
-            isCore: !m.isCore
+            isCore: !m.isCore,
           };
         }
         return m;
       });
-      
+
       onUpdateMembers(updatedMembers);
-      
+
       if (!member.isCore) {
-        toast.success(`${member.name} đã được thêm vào danh sách thành viên cứng`);
+        toast.success(
+          `${member.name} đã được thêm vào danh sách thành viên cứng`
+        );
       } else {
         toast.info(`${member.name} đã được xóa khỏi danh sách thành viên cứng`);
       }
     } else {
       toast.error("Có lỗi xảy ra khi cập nhật trạng thái thành viên");
     }
-    
+
     setLoading(false);
   };
 
@@ -69,7 +72,10 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
           {isAdmin && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Badge variant="outline" className="flex items-center gap-1 border-badminton text-badminton">
+                <Badge
+                  variant="outline"
+                  className="flex items-center gap-1 border-badminton text-badminton"
+                >
                   <ShieldCheck className="h-4 w-4" />
                 </Badge>
               </TooltipTrigger>
@@ -83,22 +89,31 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
           {members.length} người
         </div>
       </div>
-      
+
       <div className="space-y-3">
-        {members.map(member => (
-          <div 
+        {members.map((member) => (
+          <div
             key={member.id}
             className="flex items-center justify-between p-3 rounded-xl border border-border hover:border-badminton hover:bg-badminton-light/20 transition-all duration-200"
           >
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-full bg-badminton flex items-center justify-center text-white text-sm">
-                {member.name.charAt(0)}
-              </div>
+              <Avatar className="w-6 h-6 rounded-full bg-badminton flex items-center justify-center text-white text-xs mr-2 overflow-hidden">
+                {member?.avatarUrl ? (
+                  <AvatarImage src={member.avatarUrl} alt={member?.name} />
+                ) : (
+                  <AvatarFallback className="bg-badminton text-white">
+                    {member.name.charAt(0).toUpperCase() || "--"}
+                  </AvatarFallback>
+                )}
+              </Avatar>
               <span className="font-medium">{member.name}</span>
               {member.isCore && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Badge variant="secondary" className="bg-badminton-light text-badminton-dark p-1">
+                    <Badge
+                      variant="secondary"
+                      className="bg-badminton-light text-badminton-dark p-1"
+                    >
                       <Star className="h-3 w-3 text-badminton" />
                     </Badge>
                   </TooltipTrigger>
@@ -108,11 +123,13 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
                 </Tooltip>
               )}
             </div>
-            
+
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted-foreground mr-1">Thành viên cứng</span>
+              <span className="text-sm text-muted-foreground mr-1">
+                Thành viên cứng
+              </span>
               {isAdmin ? (
-                <Switch 
+                <Switch
                   checked={member.isCore}
                   onCheckedChange={() => toggleCoreMemberStatus(member)}
                   disabled={loading}
@@ -122,7 +139,7 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <div className="flex items-center">
-                      <Switch 
+                      <Switch
                         checked={member.isCore}
                         disabled={true}
                         className="data-[state=checked]:bg-badminton opacity-50 cursor-not-allowed"
@@ -131,7 +148,9 @@ const MemberList: React.FC<MemberListProps> = ({ members, onUpdateMembers }) => 
                     </div>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Chỉ admin mới có thể thay đổi trạng thái thành viên cứng</p>
+                    <p>
+                      Chỉ admin mới có thể thay đổi trạng thái thành viên cứng
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               )}

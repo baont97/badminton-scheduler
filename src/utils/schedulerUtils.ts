@@ -5,6 +5,7 @@ export interface Member {
   id: string;
   name: string;
   isCore: boolean;
+  avatarUrl: string | undefined
 }
 
 export interface CalendarDay {
@@ -48,20 +49,6 @@ export const getAprilTuesdaysAndFridays = (): CalendarDay[] => {
   }
   
   return days;
-};
-
-// Generate random member names
-export const generateMembers = (): Member[] => {
-  const names = [
-    "Minh", "Hùng", "Tuấn", "Linh", "Hà", "Dũng", 
-    "Anh", "Nam", "Hiếu", "Hoàng", "Thảo", "Tùng"
-  ];
-  
-  return names.map((name, index) => ({
-    id: `${index + 1}`,
-    name,
-    isCore: index < 3 // First 3 members are core members
-  }));
 };
 
 // Calculate cost per person per day

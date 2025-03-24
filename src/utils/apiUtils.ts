@@ -6,7 +6,7 @@ export async function fetchUsers(): Promise<Member[]> {
   try {
     const { data: profiles, error } = await supabase
       .from("profiles")
-      .select("id, user_name");
+      .select("*");
       
     if (error) throw error;
     
@@ -21,7 +21,8 @@ export async function fetchUsers(): Promise<Member[]> {
     return profiles.map(profile => ({
       id: profile.id,
       name: profile.user_name || "Unnamed User",
-      isCore: coreMembers.some(cm => cm.user_id === profile.id)
+      isCore: coreMembers.some(cm => cm.user_id === profile.id),
+      avatarUrl: profile.avatar_url
     }));
   } catch (error) {
     console.error("Error fetching users:", error);
