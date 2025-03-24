@@ -104,31 +104,21 @@ const MemberList: React.FC<MemberListProps> = ({
                 className="mr-2"
               />
               <span className="font-medium">{member.name}</span>
-              {member.isCore && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge className="bg-badminton text-white border-none px-1.5 py-0.5 text-xs">
-                      CỨNG
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Thành viên cứng</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
             </div>
 
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted-foreground mr-1">
-                Thành viên cứng
-              </span>
               {isAdmin ? (
-                <Switch
-                  checked={member.isCore}
-                  onCheckedChange={() => toggleCoreMemberStatus(member)}
-                  disabled={loading}
-                  className="data-[state=checked]:bg-badminton"
-                />
+                <>
+                  <Badge className="bg-badminton text-white border-none px-1.5 py-0.5 text-xs">
+                    CỨNG
+                  </Badge>
+                  <Switch
+                    checked={member.isCore}
+                    onCheckedChange={() => toggleCoreMemberStatus(member)}
+                    disabled={loading}
+                    className="data-[state=checked]:bg-badminton"
+                  />
+                </>
               ) : (
                 <Tooltip>
                   <TooltipTrigger asChild>
