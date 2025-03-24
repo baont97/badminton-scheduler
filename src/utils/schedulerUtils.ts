@@ -1,11 +1,10 @@
-
 import { toast } from "sonner";
 
 export interface Member {
   id: string;
   name: string;
   isCore: boolean;
-  avatarUrl: string | undefined
+  avatarUrl: string | undefined;
 }
 
 export interface CalendarDay {
@@ -15,41 +14,11 @@ export interface CalendarDay {
   isActive: boolean;
   members: string[];
   paidMembers: string[];
+  slots: [string, number][];
   maxMembers: number;
   sessionCost: number;
   sessionTime: string;
 }
-
-// Get all Tuesdays and Fridays in April 2025 - this is kept for backwards compatibility
-// but will be replaced with dynamic data from the database
-export const getAprilTuesdaysAndFridays = (): CalendarDay[] => {
-  const days: CalendarDay[] = [];
-  const april2025 = new Date(2025, 3, 1); // April is month 3 (0-indexed)
-  
-  // Add entries for Tuesdays (2) and Fridays (5) in April
-  for (let i = 0; i < 30; i++) {
-    const currentDate = new Date(april2025);
-    currentDate.setDate(april2025.getDate() + i);
-    
-    // Check if day is Tuesday (2) or Friday (5)
-    const dayOfWeek = currentDate.getDay();
-    if (dayOfWeek === 2 || dayOfWeek === 5) { // Tuesday (2) and Friday (5)
-      days.push({
-        id: `april2025-${i+1}`,
-        date: currentDate.toISOString(),
-        dayOfWeek,
-        isActive: true,
-        members: [],
-        paidMembers: [], // Add empty paidMembers array
-        maxMembers: 10, // Default max members
-        sessionCost: 260000, // Default cost per session
-        sessionTime: "19:00-21:00" // Default time
-      });
-    }
-  }
-  
-  return days;
-};
 
 // Interface for participant count mapping
 export interface ParticipantCount {
@@ -59,37 +28,42 @@ export interface ParticipantCount {
 
 // Calculate cost per person per day
 export const calculateCostPerPerson = (
-  days: CalendarDay[], 
+  days: CalendarDay[],
   memberId: string,
   participantCounts: ParticipantCount[] = []
 ): { totalDays: number; totalCost: number } => {
-  const participatingDays = days.filter(day => 
-    day.isActive && day.members.includes(memberId)
+  const participatingDays = days.filter(
+    (day) => day.isActive && day.members.includes(memberId)
   );
-  
+
   let totalCost = 0;
-  
-  participatingDays.forEach(day => {
+
+  participatingDays.forEach((day) => {
     if (day.members.length > 0) {
       // Get total participant count for this day
       let totalParticipants = 0;
-      day.members.forEach(userId => {
-        const participantData = participantCounts.find(p => p.userId === userId);
+      day.members.forEach((userId) => {
+        const participantData = participantCounts.find(
+          (p) => p.userId === userId
+        );
         totalParticipants += participantData ? participantData.count : 1;
       });
-      
+
       // Get participant count for this member
-      const memberParticipantCount = participantCounts.find(p => p.userId === memberId)?.count || 1;
-      
+      const memberParticipantCount =
+        participantCounts.find((p) => p.userId === memberId)?.count || 1;
+
       // Default is 260,000 VND per session divided by number of participants
-      const costPerPerson = ((day.sessionCost || 260000) / totalParticipants) * memberParticipantCount;
+      const costPerPerson =
+        ((day.sessionCost || 260000) / totalParticipants) *
+        memberParticipantCount;
       totalCost += costPerPerson;
     }
   });
-  
+
   return {
     totalDays: participatingDays.length,
-    totalCost
+    totalCost,
   };
 };
 
@@ -101,19 +75,19 @@ export const addMemberToDay = (
 ): CalendarDay[] => {
   const updatedDays = [...days];
   const day = updatedDays[dayIndex];
-  
+
   if (day.members.length >= day.maxMembers) {
     toast.error(`Đã đạt giới hạn ${day.maxMembers} người cho ngày này`);
     return days;
   }
-  
+
   if (!day.members.includes(memberId)) {
     updatedDays[dayIndex] = {
       ...day,
-      members: [...day.members, memberId]
+      members: [...day.members, memberId],
     };
   }
-  
+
   return updatedDays;
 };
 
@@ -125,21 +99,21 @@ export const removeMemberFromDay = (
 ): CalendarDay[] => {
   const updatedDays = [...days];
   const day = updatedDays[dayIndex];
-  
+
   updatedDays[dayIndex] = {
     ...day,
-    members: day.members.filter(id => id !== memberId)
+    members: day.members.filter((id) => id !== memberId),
   };
-  
+
   return updatedDays;
 };
 
 // Format currency to VND
 export const formatCurrency = (amount: number): string => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    minimumFractionDigits: 0
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    minimumFractionDigits: 0,
   }).format(amount);
 };
 
@@ -154,5 +128,5 @@ export const formatDate = (date: string): string => {
   const dateObj = new Date(date);
   const day = dateObj.getDate();
   const month = dateObj.getMonth() + 1;
-  return `${day < 10 ? '0' + day : day}/${month < 10 ? '0' + month : month}`;
+  return `${day < 10 ? "0" + day : day}/${month < 10 ? "0" + month : month}`;
 };

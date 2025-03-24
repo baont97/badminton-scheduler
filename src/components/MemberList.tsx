@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { toggleCoreMember } from "@/utils/apiUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, Info, Star } from "lucide-react";
+import { ShieldCheck, Info } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -107,34 +107,21 @@ const MemberList: React.FC<MemberListProps> = ({
                 )}
               </Avatar>
               <span className="font-medium">{member.name}</span>
-              {member.isCore && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Badge
-                      variant="secondary"
-                      className="bg-badminton-light text-badminton-dark p-1"
-                    >
-                      <Star className="h-3 w-3 text-badminton" />
-                    </Badge>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Thành viên cứng</p>
-                  </TooltipContent>
-                </Tooltip>
-              )}
             </div>
 
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-muted-foreground mr-1">
-                Thành viên cứng
-              </span>
               {isAdmin ? (
-                <Switch
-                  checked={member.isCore}
-                  onCheckedChange={() => toggleCoreMemberStatus(member)}
-                  disabled={loading}
-                  className="data-[state=checked]:bg-badminton"
-                />
+                <>
+                  <Badge className="bg-badminton text-white border-none px-1.5 py-0.5 text-xs">
+                    CỨNG
+                  </Badge>
+                  <Switch
+                    checked={member.isCore}
+                    onCheckedChange={() => toggleCoreMemberStatus(member)}
+                    disabled={loading}
+                    className="data-[state=checked]:bg-badminton"
+                  />
+                </>
               ) : (
                 <Tooltip>
                   <TooltipTrigger asChild>
