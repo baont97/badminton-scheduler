@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,12 +9,29 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, CheckCircle, UserPlus, Settings, Users, Clock, Calendar } from "lucide-react";
+import { AlertTriangle, CheckCircle, UserPlus, Settings, Users, Clock, Calendar, UserX, Lock, Unlock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { fetchBadmintonSettings, updateBadmintonSettings, generateBadmintonDays } from "@/utils/apiUtils";
+import { 
+  fetchBadmintonSettings, 
+  updateBadmintonSettings, 
+  generateBadmintonDays, 
+  deleteUser,
+  blockUser 
+} from "@/utils/apiUtils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const createUserSchema = z.object({
   email: z.string().email("Email không hợp lệ"),
@@ -49,6 +65,8 @@ const Admin = () => {
   const [users, setUsers] = useState([]);
   const [userHistory, setUserHistory] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
   const { profile } = useAuth();
   
   const form = useForm<CreateUserFormValues>({
@@ -81,7 +99,6 @@ const Admin = () => {
     try {
       const settings = await fetchBadmintonSettings();
       if (settings) {
-        // Convert settings to form values
         settingsForm.reset({
           sessionPrice: settings.session_price.toString(),
           maxMembers: settings.max_members.toString(),
@@ -127,7 +144,6 @@ const Admin = () => {
   const handleCreateUser = async (data: CreateUserFormValues) => {
     setLoading(true);
     try {
-      // Call the create-user edge function
       const { data: responseData, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: data.email,
@@ -139,17 +155,14 @@ const Admin = () => {
       if (error) throw error;
       if (responseData?.error) throw new Error(responseData.error);
 
-      // Success
       toast.success(`Đã tạo tài khoản cho ${data.fullName}`, {
         description: "Thành viên mới đã được tạo thành công"
       });
       form.reset();
-      fetchUsers(); // Refresh user list
-
+      fetchUsers();
     } catch (error) {
       console.error("Error creating user:", error);
       
-      // Check for specific error conditions
       if (error.message.includes("already exists")) {
         toast.error("Email này đã được sử dụng", {
           description: "Vui lòng sử dụng email khác để tạo tài khoản"
@@ -167,7 +180,6 @@ const Admin = () => {
   const handleSaveSettings = async (data: SettingsFormValues) => {
     setSettingsLoading(true);
     try {
-      // Update the settings in the database
       const success = await updateBadmintonSettings({
         session_price: parseInt(data.sessionPrice),
         max_members: parseInt(data.maxMembers),
@@ -179,8 +191,6 @@ const Admin = () => {
         toast.success("Cài đặt đã được lưu", {
           description: "Thay đổi sẽ được áp dụng cho các buổi tập sắp tới"
         });
-        
-        // Generate badminton days for the current month to apply the new settings
         const currentDate = new Date();
         await generateBadmintonDays(currentDate.getFullYear(), currentDate.getMonth() + 1);
       } else {
@@ -204,7 +214,7 @@ const Admin = () => {
       if (error) throw error;
       
       toast.success(`Đã ${!isAdmin ? 'cấp' : 'hủy'} quyền admin`);
-      fetchUsers(); // Refresh user list
+      fetchUsers();
     } catch (error) {
       console.error("Error toggling admin:", error);
       toast.error("Có lỗi xảy ra khi thay đổi quyền admin");
@@ -214,7 +224,6 @@ const Admin = () => {
   const handleToggleCoreMember = async (userId, isCore) => {
     try {
       if (isCore) {
-        // Remove from core members
         const { error } = await supabase
           .from('core_members')
           .delete()
@@ -222,7 +231,6 @@ const Admin = () => {
         
         if (error) throw error;
       } else {
-        // Add to core members
         const { error } = await supabase
           .from('core_members')
           .insert({ user_id: userId });
@@ -231,14 +239,56 @@ const Admin = () => {
       }
       
       toast.success(`Đã ${!isCore ? 'thêm' : 'xóa'} thành viên cứng`);
-      fetchUsers(); // Refresh user list
+      fetchUsers();
     } catch (error) {
       console.error("Error toggling core member:", error);
       toast.error("Có lỗi xảy ra khi thay đổi trạng thái thành viên cứng");
     }
   };
 
-  // Redirect if not admin
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm("Bạn có chắc chắn muốn xóa người dùng này không? Hành động này không thể hoàn tác.")) {
+      return;
+    }
+    
+    setDeleteLoading(true);
+    try {
+      const result = await deleteUser(userId);
+      
+      if (result.success) {
+        toast.success(result.message);
+        setSelectedUser(null);
+        fetchUsers();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Có lỗi xảy ra khi xóa người dùng");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
+  const handleBlockUser = async (userId, isBlocked) => {
+    setBlockLoading(true);
+    try {
+      const result = await blockUser(userId, isBlocked);
+      
+      if (result.success) {
+        toast.success(result.message);
+        fetchUsers();
+      } else {
+        toast.error(result.message);
+      }
+    } catch (error) {
+      console.error("Error toggling user block status:", error);
+      toast.error(`Có lỗi xảy ra khi ${isBlocked ? 'mở khóa' : 'khóa'} người dùng`);
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
   if (profile && !profile.is_admin) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -557,8 +607,71 @@ const Admin = () => {
                     </div>
                     
                     <div className="flex justify-end gap-2">
-                      <Button variant="outline" size="sm">Khóa tài khoản</Button>
-                      <Button variant="destructive" size="sm">Xóa tài khoản</Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            className="flex items-center gap-1"
+                            disabled={blockLoading}
+                          >
+                            {selectedUser.is_banned ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                            {selectedUser.is_banned ? "Mở khóa tài khoản" : "Khóa tài khoản"}
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              {selectedUser.is_banned ? "Mở khóa tài khoản" : "Khóa tài khoản"}
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {selectedUser.is_banned 
+                                ? "Người dùng này hiện đang bị khóa. Mở khóa sẽ cho phép họ đăng nhập và sử dụng hệ thống."
+                                : "Khóa tài khoản sẽ ngăn người dùng đăng nhập và sử dụng hệ thống, nhưng không xóa dữ liệu của họ."}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Hủy</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleBlockUser(selectedUser.id, selectedUser.is_banned)}
+                              className={selectedUser.is_banned ? "bg-badminton hover:bg-badminton/80" : "bg-amber-500 hover:bg-amber-600"}
+                            >
+                              {selectedUser.is_banned ? "Mở khóa" : "Khóa"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            className="flex items-center gap-1"
+                            disabled={deleteLoading}
+                          >
+                            <UserX className="h-4 w-4" />
+                            Xóa tài khoản
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Xóa tài khoản</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Hành động này không thể hoàn tác. Tài khoản và tất cả dữ liệu liên quan sẽ bị xóa vĩnh viễn.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Hủy</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteUser(selectedUser.id)}
+                              className="bg-destructive hover:bg-destructive/90"
+                            >
+                              Xóa
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
                     </div>
                   </div>
                 ) : (
