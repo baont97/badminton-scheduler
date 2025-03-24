@@ -18,7 +18,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
+
+import ClickableAvatar from "@/components/ClickableAvatar";
 
 interface CalendarProps {
   days: CalendarDay[];
@@ -422,19 +423,12 @@ const Calendar: React.FC<CalendarProps> = ({
                           className="flex items-center justify-between p-2 rounded-lg bg-badminton bg-opacity-10"
                         >
                           <div className="flex items-center">
-                            <Avatar className="w-6 h-6 rounded-full bg-badminton flex items-center justify-center text-white text-xs mr-2 overflow-hidden">
-                              {memberData?.avatarUrl ? (
-                                <AvatarImage
-                                  src={memberData.avatarUrl}
-                                  alt={memberData?.name || user?.email || ""}
-                                />
-                              ) : (
-                                <AvatarFallback className="bg-badminton text-white">
-                                  {memberData.name.charAt(0).toUpperCase() ||
-                                    "--"}
-                                </AvatarFallback>
-                              )}
-                            </Avatar>
+                            <ClickableAvatar
+                              name={memberData.name || ""}
+                              imageUrl={memberData.avatarUrl}
+                              size="sm"
+                              className="mr-2"
+                            />
 
                             <div className="flex flex-col">
                               <span className="text-sm">{memberData.name}</span>

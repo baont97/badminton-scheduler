@@ -11,7 +11,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Avatar, AvatarFallback, AvatarImage } from "@radix-ui/react-avatar";
+import ClickableAvatar from "@/components/ClickableAvatar";
 
 interface MemberListProps {
   members: Member[];
@@ -97,31 +97,38 @@ const MemberList: React.FC<MemberListProps> = ({
             className="flex items-center justify-between p-3 rounded-xl border border-border hover:border-badminton hover:bg-badminton-light/20 transition-all duration-200"
           >
             <div className="flex items-center space-x-3">
-              <Avatar className="w-6 h-6 rounded-full bg-badminton flex items-center justify-center text-white text-xs mr-2 overflow-hidden">
-                {member?.avatarUrl ? (
-                  <AvatarImage src={member.avatarUrl} alt={member?.name} />
-                ) : (
-                  <AvatarFallback className="bg-badminton text-white">
-                    {member.name.charAt(0).toUpperCase() || "--"}
-                  </AvatarFallback>
-                )}
-              </Avatar>
+              <ClickableAvatar
+                name={member.name}
+                imageUrl={member.avatarUrl}
+                size="sm"
+                className="mr-2"
+              />
               <span className="font-medium">{member.name}</span>
+              {member.isCore && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge className="bg-badminton text-white border-none px-1.5 py-0.5 text-xs">
+                      CỨNG
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Thành viên cứng</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
             </div>
 
             <div className="flex items-center space-x-2">
+              <span className="text-sm text-muted-foreground mr-1">
+                Thành viên cứng
+              </span>
               {isAdmin ? (
-                <>
-                  <Badge className="bg-badminton text-white border-none px-1.5 py-0.5 text-xs">
-                    CỨNG
-                  </Badge>
-                  <Switch
-                    checked={member.isCore}
-                    onCheckedChange={() => toggleCoreMemberStatus(member)}
-                    disabled={loading}
-                    className="data-[state=checked]:bg-badminton"
-                  />
-                </>
+                <Switch
+                  checked={member.isCore}
+                  onCheckedChange={() => toggleCoreMemberStatus(member)}
+                  disabled={loading}
+                  className="data-[state=checked]:bg-badminton"
+                />
               ) : (
                 <Tooltip>
                   <TooltipTrigger asChild>

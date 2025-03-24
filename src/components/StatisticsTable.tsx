@@ -5,8 +5,8 @@ import {
   calculateCostPerPerson,
   formatCurrency,
 } from "@/utils/schedulerUtils";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import ClickableAvatar from "@/components/ClickableAvatar";
 
 interface StatisticsTableProps {
   days: CalendarDay[];
@@ -41,18 +41,12 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
                 >
                   <td className="py-4">
                     <div className="flex items-center">
-                      <Avatar className="w-8 h-8 mr-3">
-                        {member.avatarUrl ? (
-                          <AvatarImage
-                            src={member.avatarUrl}
-                            alt={member.name}
-                          />
-                        ) : (
-                          <AvatarFallback className="bg-badminton text-white">
-                            {member.name.charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
+                      <ClickableAvatar
+                        name={member.name}
+                        imageUrl={member.avatarUrl}
+                        size="md"
+                        className="mr-3"
+                      />
                       <span>{member.name}</span>
                     </div>
                   </td>

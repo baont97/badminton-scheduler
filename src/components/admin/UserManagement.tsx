@@ -18,6 +18,7 @@ import { Calendar, Clock, Lock, Unlock, UserX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { deleteUser, blockUser } from "@/utils/apiUtils";
+import ClickableAvatar from "@/components/ClickableAvatar";
 
 interface UserManagementProps {
   users: any[];
@@ -168,9 +169,11 @@ const UserManagement: React.FC<UserManagementProps> = ({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-badminton flex items-center justify-center text-white">
-                        {user.name?.charAt(0) || "?"}
-                      </div>
+                      <ClickableAvatar
+                        name={user.name || "User"}
+                        imageUrl={user.avatar_url}
+                        size="sm"
+                      />
                       <div>
                         <p className="font-medium">{user.name}</p>
                         <p className="text-xs text-muted-foreground">
@@ -186,7 +189,7 @@ const UserManagement: React.FC<UserManagementProps> = ({
                       )}
                       {user.is_core && (
                         <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
-                          Core
+                          CỨNG
                         </span>
                       )}
                       {user.is_banned && (
