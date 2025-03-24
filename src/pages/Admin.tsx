@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,6 +68,7 @@ const Admin = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [blockLoading, setBlockLoading] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const { profile } = useAuth();
   
   const form = useForm<CreateUserFormValues>({
@@ -114,12 +116,26 @@ const Admin = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*');
+      const { data: profiles, error } = await supabase
+        .from("profiles")
+        .select("*");
       
       if (error) throw error;
-      setUsers(data || []);
+      
+      // Fetch core members to mark them accordingly
+      const { data: coreMembers, error: coreError } = await supabase
+        .from("core_members")
+        .select("user_id");
+        
+      if (coreError) throw coreError;
+      
+      // Add is_core flag to profiles
+      const updatedProfiles = profiles.map(profile => ({
+        ...profile,
+        is_core: coreMembers.some(cm => cm.user_id === profile.id)
+      }));
+      
+      setUsers(updatedProfiles || []);
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Không thể tải danh sách người dùng");
@@ -127,17 +143,29 @@ const Admin = () => {
   };
 
   const fetchUserHistory = async (userId) => {
+    if (!userId) return;
+    
+    setHistoryLoading(true);
+    setUserHistory([]);
+    
     try {
       const { data, error } = await supabase
         .from('badminton_participants')
-        .select('*, days:day_id(*)')
+        .select('*, badminton_days:day_id(id, date)')
         .eq('user_id', userId);
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error details:", error);
+        throw error;
+      }
+      
+      console.log("User history data:", data);
       setUserHistory(data || []);
     } catch (error) {
       console.error("Error fetching user history:", error);
       toast.error("Không thể tải lịch sử tham gia");
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -525,6 +553,8 @@ const Admin = () => {
                           </div>
                           <div className="flex flex-col gap-1">
                             {user.is_admin && <span className="text-xs bg-badminton/20 text-badminton px-2 py-0.5 rounded-full">Admin</span>}
+                            {user.is_core && <span className="text-xs bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">Core</span>}
+                            {user.is_banned && <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded-full">Đã khóa</span>}
                           </div>
                         </div>
                       </div>
@@ -587,16 +617,20 @@ const Admin = () => {
                         <Clock className="h-4 w-4" />
                         Lịch sử tham gia
                       </h3>
-                      {userHistory.length > 0 ? (
+                      {historyLoading ? (
+                        <div className="flex justify-center p-4">
+                          <p className="text-muted-foreground text-sm">Đang tải lịch sử...</p>
+                        </div>
+                      ) : userHistory.length > 0 ? (
                         <div className="space-y-2">
                           {userHistory.map(entry => (
                             <div key={entry.id} className="p-2 border rounded flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4 text-badminton" />
-                                <span>{entry.days?.date || "Không xác định"}</span>
+                                <span>{entry.badminton_days?.date ? new Date(entry.badminton_days.date).toLocaleDateString('vi-VN') : "Không xác định"}</span>
                               </div>
-                              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
-                                Đã tham gia
+                              <span className={`text-xs px-2 py-0.5 rounded-full ${entry.has_paid ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'}`}>
+                                {entry.has_paid ? 'Đã thanh toán' : 'Chưa thanh toán'}
                               </span>
                             </div>
                           ))}
