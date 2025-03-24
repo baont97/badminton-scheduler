@@ -4,6 +4,9 @@ import {
   Member,
   getDayName,
   formatDate,
+  ParticipantCount,
+  formatCurrency,
+  calculateCostPerPerson,
 } from "@/utils/schedulerUtils";
 import { toast } from "sonner";
 import { toggleParticipation, markPaymentStatus } from "@/utils/apiUtils";
@@ -43,6 +46,7 @@ const Calendar: React.FC<CalendarProps> = ({
   onChangeMonth,
 }) => {
   const [loading, setLoading] = useState(false);
+  const [participantCounts, setParticipantCounts] = useState<ParticipantCount[]>([]);
   const { user, profile } = useAuth();
   const isAdmin = profile?.is_admin === true;
 
@@ -74,7 +78,44 @@ const Calendar: React.FC<CalendarProps> = ({
     return members.some((member) => member.id === user?.id && member.isCore);
   };
 
-  const handleToggleParticipation = async (dayIndex: number) => {
+  // Get participant count for a user
+  const getParticipantCount = (userId: string): number => {
+    const participant = participantCounts.find(p => p.userId === userId);
+    return participant ? participant.count : 1;
+  };
+
+  // Update participant count for a user
+  const updateParticipantCount = (userId: string, count: number) => {
+    const newCounts = [...participantCounts];
+    const index = newCounts.findIndex(p => p.userId === userId);
+    
+    if (index >= 0) {
+      newCounts[index] = { ...newCounts[index], count };
+    } else {
+      newCounts.push({ userId, count });
+    }
+    
+    setParticipantCounts(newCounts);
+  };
+
+  // Calculate payment amount for a day and user
+  const calculatePaymentAmount = (day: CalendarDay, userId: string): number => {
+    if (!day.members.includes(userId)) return 0;
+    
+    // Get total participant count for this day
+    let totalParticipants = 0;
+    day.members.forEach(memberId => {
+      totalParticipants += getParticipantCount(memberId);
+    });
+    
+    // Get participant count for this member
+    const memberParticipantCount = getParticipantCount(userId);
+    
+    // Calculate cost per person
+    return ((day.sessionCost || 260000) / totalParticipants) * memberParticipantCount;
+  };
+
+  const handleToggleParticipation = async (dayIndex: number, participantCount: number = 1) => {
     if (!user) {
       toast.error("Vui lòng đăng nhập để tham gia");
       return;
@@ -97,8 +138,16 @@ const Calendar: React.FC<CalendarProps> = ({
       return;
     }
 
-    // Check max members limit
-    if (!isMemberInDay && day.members.length >= day.maxMembers) {
+    // Check max members limit - account for participant count
+    const currentTotal = day.members.reduce((total, memberId) => {
+      return total + getParticipantCount(memberId);
+    }, 0);
+    
+    const newTotal = isMemberInDay 
+      ? currentTotal - getParticipantCount(user.id)
+      : currentTotal + participantCount;
+      
+    if (!isMemberInDay && newTotal > day.maxMembers) {
       toast.error(`Đã đạt giới hạn ${day.maxMembers} người cho ngày này`);
       return;
     }
@@ -121,12 +170,19 @@ const Calendar: React.FC<CalendarProps> = ({
             (id) => id !== user.id
           ),
         };
+        
+        // Remove participant count
+        const newCounts = participantCounts.filter(p => p.userId !== user.id);
+        setParticipantCounts(newCounts);
       } else {
         // Add member to day
         updatedDays[actualDayIndex] = {
           ...days[actualDayIndex],
           members: [...days[actualDayIndex].members, user.id],
         };
+        
+        // Set participant count
+        updateParticipantCount(user.id, participantCount);
       }
 
       onUpdateDays(updatedDays);
@@ -328,7 +384,7 @@ const Calendar: React.FC<CalendarProps> = ({
 
                 <div className="mb-2">
                   <p className="text-xs text-muted-foreground">
-                    {day.members.length}/{day.maxMembers} người tham gia
+                    {day.members.reduce((total, memberId) => total + getParticipantCount(memberId), 0)}/{day.maxMembers} người tham gia
                   </p>
                   <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
                     <div
@@ -337,7 +393,7 @@ const Calendar: React.FC<CalendarProps> = ({
                       }`}
                       style={{
                         width: `${
-                          (day.members.length / day.maxMembers) * 100
+                          (day.members.reduce((total, memberId) => total + getParticipantCount(memberId), 0) / day.maxMembers) * 100
                         }%`,
                       }}
                     ></div>
@@ -352,6 +408,9 @@ const Calendar: React.FC<CalendarProps> = ({
                       if (!memberData) return null;
                       const memberHasPaid = day.paidMembers.includes(memberId);
 
+                      const participantCount = getParticipantCount(memberId);
+                      const paymentAmount = calculatePaymentAmount(day, memberId);
+                      
                       return (
                         <div
                           key={memberId}
@@ -362,7 +421,7 @@ const Calendar: React.FC<CalendarProps> = ({
                               {memberData?.avatarUrl ? (
                                 <AvatarImage
                                   src={memberData.avatarUrl}
-                                  alt={memberData?.name || user.email}
+                                  alt={memberData?.name || user?.email || ""}
                                 />
                               ) : (
                                 <AvatarFallback className="bg-badminton text-white">
@@ -372,7 +431,14 @@ const Calendar: React.FC<CalendarProps> = ({
                               )}
                             </Avatar>
 
-                            <span className="text-sm">{memberData.name}</span>
+                            <div className="flex flex-col">
+                              <span className="text-sm">{memberData.name}</span>
+                              {participantCount > 1 && (
+                                <span className="text-xs text-muted-foreground">
+                                  {participantCount} người
+                                </span>
+                              )}
+                            </div>
                           </div>
                           <div className="flex items-center space-x-1">
                             {memberHasPaid && (
@@ -388,7 +454,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                     </Badge>
                                   </TooltipTrigger>
                                   <TooltipContent>
-                                    <p>Đã thanh toán</p>
+                                    <p>Đã thanh toán {formatCurrency(paymentAmount)}</p>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
@@ -422,6 +488,17 @@ const Calendar: React.FC<CalendarProps> = ({
                   <div className="mt-4 space-y-2">
                     {isParticipating ? (
                       <div className="flex flex-col gap-2">
+                        {/* Display payment amount */}
+                        <div className="text-sm text-center mb-1">
+                          <span className="font-medium">Số tiền cần trả: </span>
+                          <span className="text-badminton font-semibold">
+                            {formatCurrency(calculatePaymentAmount(day, user.id))}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({getParticipantCount(user.id)} người)
+                          </span>
+                        </div>
+                        
                         <Button
                           variant="outline"
                           size="sm"
@@ -458,22 +535,48 @@ const Calendar: React.FC<CalendarProps> = ({
                         </Button>
                       </div>
                     ) : (
-                      <Button
-                        className={`w-full ${
-                          day.isActive
-                            ? "bg-badminton hover:bg-badminton/80"
-                            : "bg-gray-400 hover:bg-gray-500"
-                        }`}
-                        size="sm"
-                        onClick={() => handleToggleParticipation(dayIndex)}
-                        disabled={
-                          loading ||
-                          isDisabled ||
-                          day.members.length >= day.maxMembers
-                        }
-                      >
-                        <CalendarIcon className="h-4 w-4 mr-1" /> Tham gia
-                      </Button>
+                      <div className="flex flex-col gap-2">
+                        {/* Participant count input */}
+                        <div className="flex items-center justify-between mb-1">
+                          <label htmlFor={`participant-count-${dayIndex}`} className="text-sm">
+                            Số người tham gia:
+                          </label>
+                          <input
+                            id={`participant-count-${dayIndex}`}
+                            type="number"
+                            min="1"
+                            max={day.maxMembers}
+                            defaultValue="1"
+                            className="w-16 h-8 px-2 border rounded-md text-sm"
+                            onChange={(e) => {
+                              const count = parseInt(e.target.value) || 1;
+                              if (count < 1) e.target.value = "1";
+                              if (count > day.maxMembers) e.target.value = day.maxMembers.toString();
+                            }}
+                          />
+                        </div>
+                        
+                        <Button
+                          className={`w-full ${
+                            day.isActive
+                              ? "bg-badminton hover:bg-badminton/80"
+                              : "bg-gray-400 hover:bg-gray-500"
+                          }`}
+                          size="sm"
+                          onClick={() => {
+                            const input = document.getElementById(`participant-count-${dayIndex}`) as HTMLInputElement;
+                            const count = parseInt(input.value) || 1;
+                            handleToggleParticipation(dayIndex, count);
+                          }}
+                          disabled={
+                            loading ||
+                            isDisabled ||
+                            day.members.reduce((total, memberId) => total + getParticipantCount(memberId), 0) >= day.maxMembers
+                          }
+                        >
+                          <CalendarIcon className="h-4 w-4 mr-1" /> Tham gia
+                        </Button>
+                      </div>
                     )}
                   </div>
                 )}

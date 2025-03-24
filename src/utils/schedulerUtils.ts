@@ -51,10 +51,17 @@ export const getAprilTuesdaysAndFridays = (): CalendarDay[] => {
   return days;
 };
 
+// Interface for participant count mapping
+export interface ParticipantCount {
+  userId: string;
+  count: number;
+}
+
 // Calculate cost per person per day
 export const calculateCostPerPerson = (
   days: CalendarDay[], 
-  memberId: string
+  memberId: string,
+  participantCounts: ParticipantCount[] = []
 ): { totalDays: number; totalCost: number } => {
   const participatingDays = days.filter(day => 
     day.isActive && day.members.includes(memberId)
@@ -64,8 +71,18 @@ export const calculateCostPerPerson = (
   
   participatingDays.forEach(day => {
     if (day.members.length > 0) {
+      // Get total participant count for this day
+      let totalParticipants = 0;
+      day.members.forEach(userId => {
+        const participantData = participantCounts.find(p => p.userId === userId);
+        totalParticipants += participantData ? participantData.count : 1;
+      });
+      
+      // Get participant count for this member
+      const memberParticipantCount = participantCounts.find(p => p.userId === memberId)?.count || 1;
+      
       // Default is 260,000 VND per session divided by number of participants
-      const costPerPerson = (day.sessionCost || 260000) / day.members.length;
+      const costPerPerson = ((day.sessionCost || 260000) / totalParticipants) * memberParticipantCount;
       totalCost += costPerPerson;
     }
   });

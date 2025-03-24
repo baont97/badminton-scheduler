@@ -97,7 +97,11 @@ export async function fetchDayParticipants(dayId: string): Promise<{ userId: str
 }
 
 // Toggle user participation in a day
-export async function toggleParticipation(dayId: string, userId: string, isParticipating: boolean): Promise<boolean> {
+export async function toggleParticipation(
+  dayId: string, 
+  userId: string, 
+  isParticipating: boolean
+): Promise<boolean> {
   try {
     if (isParticipating) {
       // Remove participation
@@ -115,7 +119,7 @@ export async function toggleParticipation(dayId: string, userId: string, isParti
         .insert({ 
           day_id: dayId, 
           user_id: userId,
-          has_paid: false 
+          has_paid: false
         });
         
       return !error;
