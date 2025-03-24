@@ -8,7 +8,8 @@ import { toast } from "sonner";
 
 const Profile = () => {
   const { user, profile, refreshProfile } = useAuth();
-  const [fullName, setFullName] = useState(profile?.full_name || "");
+  const [userName, setUserName] = useState(profile?.user_name || "");
+  const [avatarUrl, setAvatarUrl] = useState(profile?.avatar_url || "");
   const [loading, setLoading] = useState(false);
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -21,7 +22,10 @@ const Profile = () => {
     try {
       const { error } = await supabase
         .from("profiles")
-        .update({ full_name: fullName })
+        .update({ 
+          user_name: userName,
+          avatar_url: avatarUrl 
+        })
         .eq("id", user.id);
         
       if (error) throw error;
@@ -43,31 +47,28 @@ const Profile = () => {
         
         <form onSubmit={handleUpdateProfile} className="space-y-6">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
-              Email
+            <label htmlFor="userName" className="block text-sm font-medium mb-1">
+              Tên người dùng
             </label>
             <Input
-              id="email"
-              type="email"
-              value={user?.email || ""}
-              disabled
-              className="bg-muted"
+              id="userName"
+              type="text"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              placeholder="Nhập tên người dùng của bạn"
             />
-            <p className="text-xs text-muted-foreground mt-1">
-              Email không thể thay đổi
-            </p>
           </div>
           
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium mb-1">
-              Họ và tên
+            <label htmlFor="avatarUrl" className="block text-sm font-medium mb-1">
+              URL hình đại diện
             </label>
             <Input
-              id="fullName"
+              id="avatarUrl"
               type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Nhập họ và tên của bạn"
+              value={avatarUrl}
+              onChange={(e) => setAvatarUrl(e.target.value)}
+              placeholder="Nhập URL hình đại diện của bạn"
             />
           </div>
           

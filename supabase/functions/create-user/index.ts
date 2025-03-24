@@ -22,12 +22,12 @@ serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, servicRoleKey);
     
     // Parse request body
-    const { email, password, fullName } = await req.json();
+    const { email, password, userName } = await req.json();
 
     // Validate input
-    if (!email || !password || !fullName) {
+    if (!email || !password || !userName) {
       return new Response(
-        JSON.stringify({ error: "Email, password, and fullName are required" }),
+        JSON.stringify({ error: "Email, password, and userName are required" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -73,7 +73,7 @@ serve(async (req) => {
       password,
       email_confirm: true, // Skip email verification
       user_metadata: {
-        full_name: fullName,
+        user_name: userName,
       },
     });
 
