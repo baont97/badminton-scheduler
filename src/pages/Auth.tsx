@@ -19,10 +19,11 @@ const loginSchema = z.object({
 
 // Schema for signup form with password confirmation
 const signupSchema = z.object({
-  fullName: z.string().min(2, "Họ và tên phải có ít nhất 2 ký tự"),
+  userName: z.string().min(2, "Tên người dùng phải có ít nhất 2 ký tự"),
   email: z.string().email("Email không hợp lệ"),
   password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
   confirmPassword: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+  avatarUrl: z.string().url("URL hình đại diện không hợp lệ").optional().or(z.literal('')),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Mật khẩu không khớp",
   path: ["confirmPassword"],
@@ -50,10 +51,11 @@ const Auth = () => {
   const signupForm = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
     defaultValues: {
-      fullName: "",
+      userName: "",
       email: "",
       password: "",
       confirmPassword: "",
+      avatarUrl: "",
     },
   });
 
@@ -105,7 +107,8 @@ const Auth = () => {
         password: values.password,
         options: {
           data: {
-            full_name: values.fullName,
+            user_name: values.userName,
+            avatar_url: values.avatarUrl || null,
           },
           emailRedirectTo: window.location.origin,
         }
@@ -151,12 +154,12 @@ const Auth = () => {
             <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
               <FormField
                 control={signupForm.control}
-                name="fullName"
+                name="userName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Họ và tên</FormLabel>
+                    <FormLabel>Tên người dùng</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nhập họ và tên của bạn" {...field} />
+                      <Input placeholder="Nhập tên người dùng của bạn" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -199,6 +202,20 @@ const Auth = () => {
                     <FormLabel>Xác nhận mật khẩu</FormLabel>
                     <FormControl>
                       <Input type="password" placeholder="Nhập lại mật khẩu của bạn" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={signupForm.control}
+                name="avatarUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>URL hình đại diện (không bắt buộc)</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nhập URL hình đại diện của bạn" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
