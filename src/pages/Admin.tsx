@@ -1,7 +1,6 @@
-
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertTriangle, Settings, Users, UserPlus } from "lucide-react";
 import CreateUserForm from "@/components/admin/CreateUserForm";
@@ -12,7 +11,7 @@ import { fetchUsers } from "@/utils/apiUtils";
 const Admin = () => {
   const [users, setUsers] = useState([]);
   const { profile } = useAuth();
-  
+
   useEffect(() => {
     if (profile?.is_admin) {
       loadUsers();
@@ -49,7 +48,7 @@ const Admin = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <h1 className="text-2xl font-bold mb-6">Trang Quản trị</h1>
-      
+
       <Tabs defaultValue="create-user" className="w-full">
         <TabsList className="mb-6">
           <TabsTrigger value="create-user" className="flex items-center gap-1">
@@ -65,15 +64,15 @@ const Admin = () => {
             Quản Lý Users
           </TabsTrigger>
         </TabsList>
-        
+
         <TabsContent value="create-user">
           <CreateUserForm />
         </TabsContent>
-        
+
         <TabsContent value="settings">
           <BadmintonSettings />
         </TabsContent>
-        
+
         <TabsContent value="users">
           <UserManagement users={users} onUserUpdated={loadUsers} />
         </TabsContent>

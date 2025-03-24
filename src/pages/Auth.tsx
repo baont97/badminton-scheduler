@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -8,7 +7,14 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { toast } from "sonner";
 
 // Schema for login form
@@ -18,16 +24,22 @@ const loginSchema = z.object({
 });
 
 // Schema for signup form with password confirmation
-const signupSchema = z.object({
-  userName: z.string().min(2, "Tên người dùng phải có ít nhất 2 ký tự"),
-  email: z.string().email("Email không hợp lệ"),
-  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
-  confirmPassword: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
-  avatarUrl: z.string().url("URL hình đại diện không hợp lệ").optional().or(z.literal('')),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Mật khẩu không khớp",
-  path: ["confirmPassword"],
-});
+const signupSchema = z
+  .object({
+    userName: z.string().min(2, "Tên người dùng phải có ít nhất 2 ký tự"),
+    email: z.string().email("Email không hợp lệ"),
+    password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+    confirmPassword: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+    avatarUrl: z
+      .string()
+      .url("URL hình đại diện không hợp lệ")
+      .optional()
+      .or(z.literal("")),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Mật khẩu không khớp",
+    path: ["confirmPassword"],
+  });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 type SignupFormValues = z.infer<typeof signupSchema>;
@@ -62,7 +74,7 @@ const Auth = () => {
   useEffect(() => {
     // Reset error when switching between login and signup
     setError(null);
-    
+
     // Check if user is already logged in
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
@@ -70,22 +82,22 @@ const Auth = () => {
         navigate("/");
       }
     };
-    
+
     checkUser();
   }, [navigate, isSignUp]);
 
   const handleLogin = async (values: LoginFormValues) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: values.email,
-        password: values.password
+        password: values.password,
       });
-      
+
       if (error) throw error;
-      
+
       toast.success("Đăng nhập thành công!");
       navigate("/");
     } catch (error: any) {
@@ -99,7 +111,7 @@ const Auth = () => {
   const handleSignup = async (values: SignupFormValues) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // Sign up with email and password
       const { error } = await supabase.auth.signUp({
@@ -111,11 +123,11 @@ const Auth = () => {
             avatar_url: values.avatarUrl || null,
           },
           emailRedirectTo: window.location.origin,
-        }
+        },
       });
-      
+
       if (error) throw error;
-      
+
       toast.success("Đăng ký thành công!");
       navigate("/");
     } catch (error: any) {
@@ -137,8 +149,8 @@ const Auth = () => {
             {isSignUp ? "Tạo tài khoản mới" : "Đăng nhập"}
           </h1>
           <p className="text-muted-foreground mt-2">
-            {isSignUp 
-              ? "Đăng ký để tham gia lịch đánh cầu lông" 
+            {isSignUp
+              ? "Đăng ký để tham gia lịch đánh cầu lông"
               : "Đăng nhập để quản lý lịch đánh cầu lông"}
           </p>
         </div>
@@ -151,7 +163,10 @@ const Auth = () => {
 
         {isSignUp ? (
           <Form {...signupForm}>
-            <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
+            <form
+              onSubmit={signupForm.handleSubmit(handleSignup)}
+              className="space-y-4"
+            >
               <FormField
                 control={signupForm.control}
                 name="userName"
@@ -159,13 +174,16 @@ const Auth = () => {
                   <FormItem>
                     <FormLabel>Tên người dùng</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nhập tên người dùng của bạn" {...field} />
+                      <Input
+                        placeholder="Nhập tên người dùng của bạn"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={signupForm.control}
                 name="email"
@@ -173,13 +191,17 @@ const Auth = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="Nhập email của bạn" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="Nhập email của bạn"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={signupForm.control}
                 name="password"
@@ -187,13 +209,17 @@ const Auth = () => {
                   <FormItem>
                     <FormLabel>Mật khẩu</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Nhập mật khẩu của bạn" {...field} />
+                      <Input
+                        type="password"
+                        placeholder="Nhập mật khẩu của bạn"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={signupForm.control}
                 name="confirmPassword"
@@ -201,13 +227,17 @@ const Auth = () => {
                   <FormItem>
                     <FormLabel>Xác nhận mật khẩu</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Nhập lại mật khẩu của bạn" {...field} />
+                      <Input
+                        type="password"
+                        placeholder="Nhập lại mật khẩu của bạn"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={signupForm.control}
                 name="avatarUrl"
@@ -215,16 +245,19 @@ const Auth = () => {
                   <FormItem>
                     <FormLabel>URL hình đại diện (không bắt buộc)</FormLabel>
                     <FormControl>
-                      <Input placeholder="Nhập URL hình đại diện của bạn" {...field} />
+                      <Input
+                        placeholder="Nhập URL hình đại diện của bạn"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-badminton hover:bg-badminton/80" 
+
+              <Button
+                type="submit"
+                className="w-full bg-badminton hover:bg-badminton/80"
                 disabled={loading}
               >
                 {loading ? "Đang xử lý..." : "Đăng ký"}
@@ -233,7 +266,10 @@ const Auth = () => {
           </Form>
         ) : (
           <Form {...loginForm}>
-            <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+            <form
+              onSubmit={loginForm.handleSubmit(handleLogin)}
+              className="space-y-4"
+            >
               <FormField
                 control={loginForm.control}
                 name="email"
@@ -241,13 +277,17 @@ const Auth = () => {
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
-                      <Input type="email" placeholder="Nhập email của bạn" {...field} />
+                      <Input
+                        type="email"
+                        placeholder="Nhập email của bạn"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <FormField
                 control={loginForm.control}
                 name="password"
@@ -255,16 +295,20 @@ const Auth = () => {
                   <FormItem>
                     <FormLabel>Mật khẩu</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Nhập mật khẩu của bạn" {...field} />
+                      <Input
+                        type="password"
+                        placeholder="Nhập mật khẩu của bạn"
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
-              <Button 
-                type="submit" 
-                className="w-full bg-badminton hover:bg-badminton/80" 
+
+              <Button
+                type="submit"
+                className="w-full bg-badminton hover:bg-badminton/80"
                 disabled={loading}
               >
                 {loading ? "Đang xử lý..." : "Đăng nhập"}
@@ -282,8 +326,8 @@ const Auth = () => {
             }}
             className="text-sm text-badminton hover:underline"
           >
-            {isSignUp 
-              ? "Đã có tài khoản? Đăng nhập ngay" 
+            {isSignUp
+              ? "Đã có tài khoản? Đăng nhập ngay"
               : "Chưa có tài khoản? Đăng ký ngay"}
           </button>
         </div>

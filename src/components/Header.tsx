@@ -40,11 +40,11 @@ const Header: React.FC = () => {
                   <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                     <Avatar className="h-8 w-8">
                       {profile?.avatar_url ? (
-                        <AvatarImage src={profile.avatar_url} alt={profile?.full_name || user.email} />
+                        <AvatarImage src={profile.avatar_url} alt={profile?.user_name || user.email} />
                       ) : (
                         <AvatarFallback className="bg-badminton text-white">
-                          {profile?.full_name 
-                            ? profile.full_name.charAt(0).toUpperCase() 
+                          {profile?.user_name 
+                            ? profile.user_name.charAt(0).toUpperCase() 
                             : user.email?.charAt(0).toUpperCase()}
                         </AvatarFallback>
                       )}
@@ -53,7 +53,7 @@ const Header: React.FC = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <div className="flex flex-col space-y-1 p-2 leading-none">
-                    <p className="font-medium">{profile?.full_name || "Người dùng"}</p>
+                    <p className="font-medium">{profile?.user_name || "Người dùng"}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                     {isAdmin && (
                       <div className="mt-1">

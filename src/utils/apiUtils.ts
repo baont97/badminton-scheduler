@@ -6,7 +6,7 @@ export async function fetchUsers(): Promise<Member[]> {
   try {
     const { data: profiles, error } = await supabase
       .from("profiles")
-      .select("id, full_name");
+      .select("id, user_name");
       
     if (error) throw error;
     
@@ -20,7 +20,7 @@ export async function fetchUsers(): Promise<Member[]> {
     // Map profiles to Member format
     return profiles.map(profile => ({
       id: profile.id,
-      name: profile.full_name || "Unnamed User",
+      name: profile.user_name || "Unnamed User",
       isCore: coreMembers.some(cm => cm.user_id === profile.id)
     }));
   } catch (error) {
