@@ -5,18 +5,62 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { toast } from "sonner";
+
+// Schema for login form
+const loginSchema = z.object({
+  email: z.string().email("Email không hợp lệ"),
+  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+});
+
+// Schema for signup form with password confirmation
+const signupSchema = z.object({
+  fullName: z.string().min(2, "Họ và tên phải có ít nhất 2 ký tự"),
+  email: z.string().email("Email không hợp lệ"),
+  password: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+  confirmPassword: z.string().min(6, "Mật khẩu phải có ít nhất 6 ký tự"),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Mật khẩu không khớp",
+  path: ["confirmPassword"],
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
+type SignupFormValues = z.infer<typeof signupSchema>;
 
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Login form
+  const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  // Signup form
+  const signupForm = useForm<SignupFormValues>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
   useEffect(() => {
+    // Reset error when switching between login and signup
+    setError(null);
+    
     // Check if user is already logged in
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
@@ -26,44 +70,54 @@ const Auth = () => {
     };
     
     checkUser();
-  }, [navigate]);
+  }, [navigate, isSignUp]);
 
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (values: LoginFormValues) => {
     setLoading(true);
     setError(null);
     
     try {
-      if (isSignUp) {
-        // Sign up
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-            }
-          }
-        });
-        
-        if (error) throw error;
-        
-        toast.success("Đăng ký thành công! Vui lòng kiểm tra email để xác nhận tài khoản.");
-      } else {
-        // Sign in
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-        
-        if (error) throw error;
-        
-        toast.success("Đăng nhập thành công!");
-        navigate("/");
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email: values.email,
+        password: values.password
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Đăng nhập thành công!");
+      navigate("/");
     } catch (error: any) {
       console.error("Authentication error:", error);
       setError(error.message || "Có lỗi xảy ra trong quá trình xác thực");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignup = async (values: SignupFormValues) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Sign up with email and password
+      const { error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            full_name: values.fullName,
+          },
+          emailRedirectTo: window.location.origin,
+        }
+      });
+      
+      if (error) throw error;
+      
+      toast.success("Đăng ký thành công!");
+      navigate("/");
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      setError(error.message || "Có lỗi xảy ra trong quá trình đăng ký");
     } finally {
       setLoading(false);
     }
@@ -92,70 +146,123 @@ const Auth = () => {
           </Alert>
         )}
 
-        <form onSubmit={handleAuth} className="space-y-4">
-          {isSignUp && (
-            <div>
-              <label htmlFor="fullName" className="block text-sm font-medium mb-1">
-                Họ và tên
-              </label>
-              <Input
-                id="fullName"
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Nhập họ và tên của bạn"
-                required
+        {isSignUp ? (
+          <Form {...signupForm}>
+            <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4">
+              <FormField
+                control={signupForm.control}
+                name="fullName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Họ và tên</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nhập họ và tên của bạn" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-          )}
-          
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium mb-1">
-              Email
-            </label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Nhập email của bạn"
-              required
-            />
-          </div>
-          
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium mb-1">
-              Mật khẩu
-            </label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Nhập mật khẩu của bạn"
-              required
-              minLength={6}
-            />
-          </div>
-          
-          <Button 
-            type="submit" 
-            className="w-full bg-badminton hover:bg-badminton/80" 
-            disabled={loading}
-          >
-            {loading 
-              ? "Đang xử lý..." 
-              : isSignUp 
-                ? "Đăng ký" 
-                : "Đăng nhập"
-            }
-          </Button>
-        </form>
+              
+              <FormField
+                control={signupForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Nhập email của bạn" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={signupForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mật khẩu</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Nhập mật khẩu của bạn" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={signupForm.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Xác nhận mật khẩu</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Nhập lại mật khẩu của bạn" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <Button 
+                type="submit" 
+                className="w-full bg-badminton hover:bg-badminton/80" 
+                disabled={loading}
+              >
+                {loading ? "Đang xử lý..." : "Đăng ký"}
+              </Button>
+            </form>
+          </Form>
+        ) : (
+          <Form {...loginForm}>
+            <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
+              <FormField
+                control={loginForm.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" placeholder="Nhập email của bạn" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={loginForm.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mật khẩu</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="Nhập mật khẩu của bạn" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <Button 
+                type="submit" 
+                className="w-full bg-badminton hover:bg-badminton/80" 
+                disabled={loading}
+              >
+                {loading ? "Đang xử lý..." : "Đăng nhập"}
+              </Button>
+            </form>
+          </Form>
+        )}
 
         <div className="text-center mt-4">
           <button
             type="button"
-            onClick={() => setIsSignUp(!isSignUp)}
+            onClick={() => {
+              setIsSignUp(!isSignUp);
+              setError(null);
+            }}
             className="text-sm text-badminton hover:underline"
           >
             {isSignUp 

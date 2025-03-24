@@ -67,11 +67,11 @@ serve(async (req) => {
       );
     }
 
-    // Create new user
+    // Create new user with email confirmation set to true (no email verification)
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
-      email_confirm: true,
+      email_confirm: true, // Skip email verification
       user_metadata: {
         full_name: fullName,
       },
