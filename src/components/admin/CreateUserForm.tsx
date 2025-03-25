@@ -44,9 +44,9 @@ const CreateUserForm = () => {
 
       const response = await supabase.functions.invoke("create-user", {
         body: {
-          userName: values.userName,
           email: values.email,
           password: values.password,
+          fullName: values.userName,
         },
       });
 

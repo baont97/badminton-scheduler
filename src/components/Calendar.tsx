@@ -42,15 +42,12 @@ const Calendar: React.FC<CalendarProps> = ({
   const { user, profile } = useAuth();
   const isAdmin = profile?.is_admin === true;
 
-  // Filter days to current month only unless admin
   const filteredDays = days.filter((day) => {
     const dayDate = new Date(day.date);
     if (!isAdmin) {
-      // For non-admins, only show current month and future dates
       const today = new Date();
       return dayDate >= new Date(today.setHours(0, 0, 0, 0));
     }
-    // Admins can see all days
     return true;
   });
 
@@ -70,31 +67,24 @@ const Calendar: React.FC<CalendarProps> = ({
     return members.some((member) => member.id === user?.id && member.isCore);
   };
 
-  // Get participant count for a user from slots
   const getParticipantCount = (day: CalendarDay, userId: string): number => {
     const slot = day.slots.find((s) => s[0] === userId);
     return slot ? slot[1] : 1;
   };
 
-  // Calculate total participants in a day
   const getTotalParticipantsInDay = (day: CalendarDay): number => {
     return day.slots.reduce((total, slot) => total + slot[1], 0);
   };
 
-  // Calculate payment amount for a day and user
   const calculatePaymentAmount = (day: CalendarDay, userId: string): number => {
     if (!day.members.includes(userId)) return 0;
 
-    // Get total participants in this day
     const totalParticipants = getTotalParticipantsInDay(day);
 
-    // If there are no participants (shouldn't happen), return 0
     if (totalParticipants === 0) return 0;
 
-    // Get participant count for this member
     const memberParticipantCount = getParticipantCount(day, userId);
 
-    // Calculate cost per person
     return (
       ((day.sessionCost || 260000) / totalParticipants) * memberParticipantCount
     );
@@ -111,7 +101,6 @@ const Calendar: React.FC<CalendarProps> = ({
 
     const day = filteredDays[dayIndex];
 
-    // Check if the day is in the past or not active
     if ((isPastDay(day.date) || !day.isActive) && !isAdmin) {
       toast.error("Không thể thay đổi tham gia cho ngày này");
       return;
@@ -119,17 +108,14 @@ const Calendar: React.FC<CalendarProps> = ({
 
     const isMemberInDay = day.members.includes(user.id);
 
-    // Check core member status
     const member = members.find((m) => m.id === user.id);
     if (isMemberInDay && member?.isCore) {
       toast.error("Thành viên cứng không thể hủy tham gia");
       return;
     }
 
-    // Check max members limit using slots data
     const currentTotal = getTotalParticipantsInDay(day);
 
-    // Calculate new total participants
     const userCurrentCount = isMemberInDay
       ? getParticipantCount(day, user.id)
       : 0;
@@ -144,7 +130,6 @@ const Calendar: React.FC<CalendarProps> = ({
 
     setLoading(true);
 
-    // Toggle participation in database
     const success = await toggleParticipation(
       day.id,
       user.id,
@@ -157,22 +142,18 @@ const Calendar: React.FC<CalendarProps> = ({
       const actualDayIndex = days.findIndex((d) => d.id === day.id);
 
       if (isMemberInDay) {
-        // Remove member from day
         updatedDays[actualDayIndex] = {
           ...days[actualDayIndex],
           members: days[actualDayIndex].members.filter((id) => id !== user.id),
           paidMembers: days[actualDayIndex].paidMembers.filter(
             (id) => id !== user.id
           ),
-          // Remove slot for this user
           slots: days[actualDayIndex].slots.filter((s) => s[0] !== user.id),
         };
       } else {
-        // Add member to day and create slot with participant count
         updatedDays[actualDayIndex] = {
           ...days[actualDayIndex],
           members: [...days[actualDayIndex].members, user.id],
-          // Add new slot with participant count
           slots: [...days[actualDayIndex].slots, [user.id, participantCount]],
         };
       }
@@ -185,7 +166,6 @@ const Calendar: React.FC<CalendarProps> = ({
     setLoading(false);
   };
 
-  // Handle payment status
   const handleTogglePaymentStatus = async (dayId: string) => {
     if (!user) {
       toast.error("Vui lòng đăng nhập để thanh toán");
@@ -206,7 +186,6 @@ const Calendar: React.FC<CalendarProps> = ({
       const updatedDays = [...days];
 
       if (hasAlreadyPaid) {
-        // Remove from paid members
         updatedDays[dayIndex] = {
           ...days[dayIndex],
           paidMembers: days[dayIndex].paidMembers.filter(
@@ -215,7 +194,6 @@ const Calendar: React.FC<CalendarProps> = ({
         };
         toast.success("Đã hủy trạng thái thanh toán");
       } else {
-        // Add to paid members
         updatedDays[dayIndex] = {
           ...days[dayIndex],
           paidMembers: [...days[dayIndex].paidMembers, user.id],
@@ -231,7 +209,6 @@ const Calendar: React.FC<CalendarProps> = ({
     setLoading(false);
   };
 
-  // Handle month navigation
   const handlePreviousMonth = () => {
     let newMonth = currentMonth - 1;
     let newYear = currentYear;
@@ -256,7 +233,6 @@ const Calendar: React.FC<CalendarProps> = ({
     onChangeMonth(newMonth, newYear);
   };
 
-  // Auto-add core members to all days
   useEffect(() => {
     const coreMembers = members
       .filter((member) => member.isCore)
@@ -273,10 +249,8 @@ const Calendar: React.FC<CalendarProps> = ({
       if (missingCoreMembers.length > 0) {
         needsUpdate = true;
 
-        // Create new slots for missing core members
         const newSlots = [...day.slots];
 
-        // Add missing core members to this day
         const updatedDay = {
           ...day,
           members: [...day.members, ...missingCoreMembers],
@@ -286,9 +260,7 @@ const Calendar: React.FC<CalendarProps> = ({
           ],
         };
 
-        // Automatically update the database for each core member
         missingCoreMembers.forEach((memberId) => {
-          // We need to call the API to add them to the database, but don't wait for it
           toggleParticipation(day.id, memberId, false, 1).catch((error) =>
             console.error(
               `Error auto-adding core member ${memberId} to day ${day.id}:`,
@@ -309,7 +281,6 @@ const Calendar: React.FC<CalendarProps> = ({
     }
   }, [days, members]);
 
-  // Get Vietnamese month name
   const getMonthName = (month: number) => {
     return `Tháng ${month}`;
   };
@@ -356,9 +327,8 @@ const Calendar: React.FC<CalendarProps> = ({
             const hasPaid = hasUserPaid(day);
             const isPast = isPastDay(day.date);
             const userCore = isUserCore();
-            const isDisabled = !day.isActive || (isPast && !isAdmin);
+            const isDisabled = !day.isActive;
 
-            // Calculate total participants in day using slots
             const totalParticipants = getTotalParticipantsInDay(day);
 
             return (
@@ -490,7 +460,6 @@ const Calendar: React.FC<CalendarProps> = ({
                   <div className="mt-4 space-y-2">
                     {isParticipating ? (
                       <div className="flex flex-col gap-2">
-                        {/* Display payment amount */}
                         <div className="text-sm text-center mb-1">
                           <span className="font-medium">Số tiền cần trả: </span>
                           <span className="text-badminton font-semibold">
@@ -512,7 +481,7 @@ const Calendar: React.FC<CalendarProps> = ({
                               : "border-badminton text-badminton hover:bg-badminton/10"
                           }`}
                           onClick={() => handleTogglePaymentStatus(day.id)}
-                          disabled={loading || (isPast && !isAdmin)}
+                          disabled={loading}
                         >
                           {hasPaid ? (
                             <>
@@ -526,66 +495,71 @@ const Calendar: React.FC<CalendarProps> = ({
                           )}
                         </Button>
 
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full border-red-500 text-red-500 hover:bg-red-50"
-                          onClick={() => handleToggleParticipation(dayIndex)}
-                          disabled={
-                            loading || isDisabled || (userCore && !isAdmin)
-                          }
-                        >
-                          <X className="h-4 w-4 mr-1" /> Hủy tham gia
-                        </Button>
+                        {(!isPast || isAdmin) && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full border-red-500 text-red-500 hover:bg-red-50"
+                            onClick={() => handleToggleParticipation(dayIndex)}
+                            disabled={
+                              loading || isDisabled || (userCore && !isAdmin)
+                            }
+                          >
+                            <X className="h-4 w-4 mr-1" /> Hủy tham gia
+                          </Button>
+                        )}
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2">
-                        {/* Participant count input */}
-                        <div className="flex items-center justify-between mb-1">
-                          <label
-                            htmlFor={`participant-count-${dayIndex}`}
-                            className="text-sm"
-                          >
-                            Số người tham gia:
-                          </label>
-                          <input
-                            id={`participant-count-${dayIndex}`}
-                            type="number"
-                            min="1"
-                            max={day.maxMembers}
-                            defaultValue="1"
-                            className="w-16 h-8 px-2 border rounded-md text-sm"
-                            onChange={(e) => {
-                              const count = parseInt(e.target.value) || 1;
-                              if (count < 1) e.target.value = "1";
-                              if (count > day.maxMembers)
-                                e.target.value = day.maxMembers.toString();
-                            }}
-                          />
-                        </div>
+                        {(!isPast || isAdmin) && (
+                          <>
+                            <div className="flex items-center justify-between mb-1">
+                              <label
+                                htmlFor={`participant-count-${dayIndex}`}
+                                className="text-sm"
+                              >
+                                Số người tham gia:
+                              </label>
+                              <input
+                                id={`participant-count-${dayIndex}`}
+                                type="number"
+                                min="1"
+                                max={day.maxMembers}
+                                defaultValue="1"
+                                className="w-16 h-8 px-2 border rounded-md text-sm"
+                                onChange={(e) => {
+                                  const count = parseInt(e.target.value) || 1;
+                                  if (count < 1) e.target.value = "1";
+                                  if (count > day.maxMembers)
+                                    e.target.value = day.maxMembers.toString();
+                                }}
+                              />
+                            </div>
 
-                        <Button
-                          className={`w-full ${
-                            day.isActive
-                              ? "bg-badminton hover:bg-badminton/80"
-                              : "bg-gray-400 hover:bg-gray-500"
-                          }`}
-                          size="sm"
-                          onClick={() => {
-                            const input = document.getElementById(
-                              `participant-count-${dayIndex}`
-                            ) as HTMLInputElement;
-                            const count = parseInt(input.value) || 1;
-                            handleToggleParticipation(dayIndex, count);
-                          }}
-                          disabled={
-                            loading ||
-                            isDisabled ||
-                            totalParticipants >= day.maxMembers
-                          }
-                        >
-                          <CalendarIcon className="h-4 w-4 mr-1" /> Tham gia
-                        </Button>
+                            <Button
+                              className={`w-full ${
+                                day.isActive
+                                  ? "bg-badminton hover:bg-badminton/80"
+                                  : "bg-gray-400 hover:bg-gray-500"
+                              }`}
+                              size="sm"
+                              onClick={() => {
+                                const input = document.getElementById(
+                                  `participant-count-${dayIndex}`
+                                ) as HTMLInputElement;
+                                const count = parseInt(input.value) || 1;
+                                handleToggleParticipation(dayIndex, count);
+                              }}
+                              disabled={
+                                loading ||
+                                isDisabled ||
+                                totalParticipants >= day.maxMembers
+                              }
+                            >
+                              <CalendarIcon className="h-4 w-4 mr-1" /> Tham gia
+                            </Button>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
