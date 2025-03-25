@@ -74,7 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Create a timeout to prevent infinite loading and force logout on timeout
     const timeoutId = setTimeout(() => {
       if (isMounted && loading) {
-        console.warn("Auth initialization timed out after 30 seconds");
+        console.warn("Auth initialization timed out after 10 seconds");
         // Force logout if initialization times out
         localStorage.removeItem('supabase.auth.session');
         localStorage.removeItem('supabase.auth.profile');
@@ -84,7 +84,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setLoading(false);
         toast.error("Không thể kết nối với hệ thống xác thực, vui lòng thử lại");
       }
-    }, 30000);
+    }, 10000);
 
     // Try to restore profile from cache first
     try {
