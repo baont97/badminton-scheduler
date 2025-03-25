@@ -15,11 +15,32 @@ interface AuthContextProps {
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
+// Try to get cached session from localStorage
+const getCachedSession = (): Session | null => {
+  try {
+    const cachedSessionStr = localStorage.getItem('supabase.auth.session');
+    if (!cachedSessionStr) return null;
+    
+    const cachedSession = JSON.parse(cachedSessionStr);
+    // Check if session is expired
+    if (cachedSession.expires_at && cachedSession.expires_at < Math.floor(Date.now() / 1000)) {
+      localStorage.removeItem('supabase.auth.session');
+      return null;
+    }
+    
+    return cachedSession;
+  } catch (error) {
+    console.error("Error parsing cached session:", error);
+    return null;
+  }
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(getCachedSession());
+  const [user, setUser] = useState<User | null>(session?.user || null);
   const [profile, setProfile] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     try {
@@ -37,6 +58,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       console.log("Profile data:", data);
       setProfile(data);
+      
+      // Cache the profile data
+      if (data) {
+        localStorage.setItem('supabase.auth.profile', JSON.stringify(data));
+      }
     } catch (error) {
       console.error("Error in fetchProfile:", error);
     }
@@ -45,13 +71,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
     
-    // Create a timeout to prevent infinite loading
+    // Create a timeout to prevent infinite loading and force logout on timeout
     const timeoutId = setTimeout(() => {
       if (isMounted && loading) {
-        console.warn("Auth initialization timed out after 10 seconds");
+        console.warn("Auth initialization timed out after 30 seconds");
+        // Force logout if initialization times out
+        localStorage.removeItem('supabase.auth.session');
+        localStorage.removeItem('supabase.auth.profile');
+        setSession(null);
+        setUser(null);
+        setProfile(null);
         setLoading(false);
+        toast.error("Không thể kết nối với hệ thống xác thực, vui lòng thử lại");
       }
     }, 30000);
+
+    // Try to restore profile from cache first
+    try {
+      const cachedProfileStr = localStorage.getItem('supabase.auth.profile');
+      if (cachedProfileStr && user) {
+        const cachedProfile = JSON.parse(cachedProfileStr);
+        if (cachedProfile && cachedProfile.id === user.id) {
+          setProfile(cachedProfile);
+        }
+      }
+    } catch (error) {
+      console.error("Error parsing cached profile:", error);
+    }
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -63,6 +109,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(newSession);
         setUser(newSession?.user ?? null);
         
+        // Cache the session
+        if (newSession) {
+          localStorage.setItem('supabase.auth.session', JSON.stringify(newSession));
+        } else if (event === 'SIGNED_OUT') {
+          localStorage.removeItem('supabase.auth.session');
+          localStorage.removeItem('supabase.auth.profile');
+          setProfile(null);
+        }
+        
         if (newSession?.user) {
           await fetchProfile(newSession.user.id);
         } else if (event === 'SIGNED_OUT') {
@@ -71,6 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Ensure loading is set to false after auth state is updated
         setLoading(false);
+        setInitialized(true);
       }
     );
 
@@ -90,11 +146,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         console.log("Initial session check:", !!existingSession);
-        setSession(existingSession);
-        setUser(existingSession?.user ?? null);
         
-        if (existingSession?.user) {
-          await fetchProfile(existingSession.user.id);
+        if (existingSession) {
+          setSession(existingSession);
+          setUser(existingSession.user);
+          localStorage.setItem('supabase.auth.session', JSON.stringify(existingSession));
+          
+          if (existingSession.user) {
+            await fetchProfile(existingSession.user.id);
+          }
+        } else {
+          // No session found, clear any cached data
+          localStorage.removeItem('supabase.auth.session');
+          localStorage.removeItem('supabase.auth.profile');
+          setSession(null);
+          setUser(null);
+          setProfile(null);
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -103,6 +170,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (isMounted) {
           setLoading(false);
           clearTimeout(timeoutId);
+          setInitialized(true);
         }
       }
     };
@@ -116,6 +184,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  // Add another effect that will force logout if initialization failed
+  useEffect(() => {
+    if (initialized && !user && !loading) {
+      // Authentication is initialized but no user is found
+      // This means auth failed or user is not logged in
+      localStorage.removeItem('supabase.auth.session');
+      localStorage.removeItem('supabase.auth.profile');
+    }
+  }, [initialized, user, loading]);
+
   const refreshProfile = async () => {
     if (user) {
       await fetchProfile(user.id);
@@ -126,6 +204,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setLoading(true);
       await supabase.auth.signOut();
+      // Clear cached data
+      localStorage.removeItem('supabase.auth.session');
+      localStorage.removeItem('supabase.auth.profile');
       toast.success("Đăng xuất thành công");
     } catch (error) {
       console.error("Error signing out:", error);
