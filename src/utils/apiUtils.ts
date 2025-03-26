@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Member, CalendarDay } from "./schedulerUtils";
 
@@ -234,17 +233,31 @@ export interface ExtraExpense {
 // Fetch extra expenses for a day
 export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]> {
   try {
-    // Use raw SQL query to get around type issues
-    const { data: expenses, error } = await supabase
-      .rpc('get_extra_expenses', { day_id_param: dayId });
+    // Use typed cast to get around type issues with custom RPC functions
+    const { data, error } = await supabase.rpc('get_extra_expenses', { 
+      day_id_param: dayId 
+    }) as unknown as { 
+      data: {
+        id: string;
+        day_id: string;
+        user_id: string;
+        user_name: string;
+        amount: number;
+        description: string | null;
+        created_at: string;
+      }[],
+      error: any
+    };
 
     if (error) {
       console.error("Error fetching expenses:", error);
       throw error;
     }
 
+    if (!data) return [];
+
     // Transform the data to match our ExtraExpense interface
-    return expenses.map((expense: any) => ({
+    return data.map((expense) => ({
       id: expense.id,
       dayId: expense.day_id,
       userId: expense.user_id,
@@ -269,15 +282,20 @@ export async function addExtraExpense(
     const { data: session } = await supabase.auth.getSession();
     if (!session?.session?.user) return false;
 
-    // Use raw SQL to insert expense
-    const { error } = await supabase.rpc('add_extra_expense', {
+    // Use type casting for custom RPC function
+    const { data, error } = await supabase.rpc('add_extra_expense', {
       day_id_param: dayId,
       user_id_param: session.session.user.id,
       amount_param: amount,
       description_param: description
-    });
+    }) as unknown as { data: boolean, error: any };
 
-    return !error;
+    if (error) {
+      console.error("Error adding expense:", error);
+      return false;
+    }
+
+    return data === true;
   } catch (error) {
     console.error("Error adding extra expense:", error);
     return false;
@@ -287,12 +305,17 @@ export async function addExtraExpense(
 // Delete an extra expense
 export async function deleteExtraExpense(expenseId: string): Promise<boolean> {
   try {
-    // Use raw SQL to delete expense
-    const { error } = await supabase.rpc('delete_extra_expense', {
+    // Use type casting for custom RPC function
+    const { data, error } = await supabase.rpc('delete_extra_expense', {
       expense_id_param: expenseId
-    });
+    }) as unknown as { data: boolean, error: any };
 
-    return !error;
+    if (error) {
+      console.error("Error deleting expense:", error);
+      return false;
+    }
+
+    return data === true;
   } catch (error) {
     console.error("Error deleting extra expense:", error);
     return false;
