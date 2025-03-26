@@ -14,7 +14,6 @@ const Index = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1); // 1-indexed month
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
 
-  // Use React Query for data fetching with improved error handling
   const {
     data: userData,
     isLoading: usersLoading,
@@ -37,7 +36,6 @@ const Index = () => {
     staleTime: 5 * 60 * 1000,
   });
 
-  // Update state when data is fetched
   useEffect(() => {
     if (userData) {
       setMembers(userData);
@@ -50,7 +48,6 @@ const Index = () => {
     }
   }, [calendarData]);
 
-  // Handle errors
   useEffect(() => {
     if (usersError) {
       console.error("Error fetching users:", usersError);
@@ -63,7 +60,6 @@ const Index = () => {
     }
   }, [usersError, calendarError]);
 
-  // Update month/year and reload data
   const changeMonth = (month: number, year: number) => {
     setCurrentMonth(month);
     setCurrentYear(year);

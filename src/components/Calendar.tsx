@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   CalendarDay,
@@ -309,7 +310,7 @@ const Calendar: React.FC<CalendarProps> = ({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {filteredDays.map((day, dayIndex) => {
             const isParticipating = isUserParticipating(day);
             const hasPaid = hasUserPaid(day);
