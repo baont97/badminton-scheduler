@@ -1,4 +1,6 @@
+
 import { toast } from "sonner";
+import { ExtraExpense } from "./apiUtils";
 
 export interface Member {
   id: string;
@@ -18,6 +20,7 @@ export interface CalendarDay {
   maxMembers: number;
   sessionCost: number;
   sessionTime: string;
+  extraExpenses?: ExtraExpense[];
 }
 
 // Interface for participant count mapping
@@ -29,8 +32,7 @@ export interface ParticipantCount {
 // Calculate cost per person per day
 export const calculateCostPerPerson = (
   days: CalendarDay[],
-  memberId: string,
-  participantCounts: ParticipantCount[] = []
+  memberId: string
 ): { totalDays: number; totalCost: number } => {
   const participatingDays = days.filter(
     (day) => day.isActive && day.members.includes(memberId)
@@ -41,23 +43,31 @@ export const calculateCostPerPerson = (
   participatingDays.forEach((day) => {
     if (day.members.length > 0) {
       // Get total participant count for this day
-      let totalParticipants = 0;
-      day.members.forEach((userId) => {
-        const participantData = participantCounts.find(
-          (p) => p.userId === userId
-        );
-        totalParticipants += participantData ? participantData.count : 1;
-      });
+      let totalParticipants = getTotalParticipantsInDay(day);
 
+      // Calculate session cost per person
+      const sessionCostPerPerson = (day.sessionCost || 260000) / totalParticipants;
+      
       // Get participant count for this member
-      const memberParticipantCount =
-        participantCounts.find((p) => p.userId === memberId)?.count || 1;
-
-      // Default is 260,000 VND per session divided by number of participants
-      const costPerPerson =
-        ((day.sessionCost || 260000) / totalParticipants) *
-        memberParticipantCount;
-      totalCost += costPerPerson;
+      const memberParticipantCount = getParticipantCount(day, memberId);
+      
+      // Calculate basic session cost for this member
+      const basicCost = sessionCostPerPerson * memberParticipantCount;
+      
+      // Calculate extra expenses share
+      const extraExpensesTotal = getTotalExtraExpenses(day);
+      const extraExpensesPerPerson = totalParticipants > 0 ? extraExpensesTotal / totalParticipants : 0;
+      
+      // Calculate member's contribution to extra expenses
+      const extraExpenseShare = extraExpensesPerPerson * memberParticipantCount;
+      
+      // Calculate credit for expenses added by this member
+      const memberExpensesCredit = getMemberExpensesCredit(day, memberId);
+      
+      // Final cost calculation
+      const finalCost = basicCost + extraExpenseShare - memberExpensesCredit;
+      
+      totalCost += finalCost;
     }
   });
 
@@ -65,6 +75,56 @@ export const calculateCostPerPerson = (
     totalDays: participatingDays.length,
     totalCost,
   };
+};
+
+// Get total participants in a day
+export const getTotalParticipantsInDay = (day: CalendarDay): number => {
+  return day.slots.reduce((total, slot) => total + slot[1], 0);
+};
+
+// Get participant count for a specific member
+export const getParticipantCount = (day: CalendarDay, userId: string): number => {
+  const slot = day.slots.find((s) => s[0] === userId);
+  return slot ? slot[1] : 0;
+};
+
+// Get total extra expenses for a day
+export const getTotalExtraExpenses = (day: CalendarDay): number => {
+  if (!day.extraExpenses) return 0;
+  return day.extraExpenses.reduce((total, expense) => total + expense.amount, 0);
+};
+
+// Get credit for expenses added by a member
+export const getMemberExpensesCredit = (day: CalendarDay, userId: string): number => {
+  if (!day.extraExpenses) return 0;
+  return day.extraExpenses
+    .filter(expense => expense.userId === userId)
+    .reduce((total, expense) => total + expense.amount, 0);
+};
+
+// Calculate payment amount for a member for a specific day
+export const calculatePaymentAmount = (day: CalendarDay, userId: string): number => {
+  if (!day.members.includes(userId)) return 0;
+
+  const totalParticipants = getTotalParticipantsInDay(day);
+  if (totalParticipants === 0) return 0;
+
+  const memberParticipantCount = getParticipantCount(day, userId);
+  
+  // Basic session cost
+  const sessionCostPerPerson = (day.sessionCost || 260000) / totalParticipants;
+  const basicCost = sessionCostPerPerson * memberParticipantCount;
+  
+  // Extra expenses share
+  const extraExpensesTotal = getTotalExtraExpenses(day);
+  const extraExpensesPerPerson = totalParticipants > 0 ? extraExpensesTotal / totalParticipants : 0;
+  const extraExpenseShare = extraExpensesPerPerson * memberParticipantCount;
+  
+  // Credit for expenses added by this member
+  const memberExpensesCredit = getMemberExpensesCredit(day, userId);
+  
+  // Final payment amount
+  return basicCost + extraExpenseShare - memberExpensesCredit;
 };
 
 // Add member to a specific day

@@ -219,6 +219,96 @@ export async function generateBadmintonDays(year: number, month: number) {
   }
 }
 
+// Add new function to handle extra expenses
+export interface ExtraExpense {
+  id: string;
+  dayId: string;
+  userId: string;
+  userName: string;
+  amount: number;
+  description: string;
+  createdAt: string;
+}
+
+// Fetch extra expenses for a day
+export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]> {
+  try {
+    const { data: expenses, error } = await supabase
+      .from("extra_expenses")
+      .select("id, day_id, user_id, amount, description, created_at")
+      .eq("day_id", dayId);
+
+    if (error) throw error;
+
+    // Fetch user names for the expenses
+    const userIds = [...new Set(expenses.map(expense => expense.user_id))];
+    const { data: profiles, error: profilesError } = await supabase
+      .from("profiles")
+      .select("id, user_name")
+      .in("id", userIds);
+
+    if (profilesError) throw profilesError;
+
+    // Map the expenses with user names
+    return expenses.map(expense => {
+      const profile = profiles.find(p => p.id === expense.user_id);
+      return {
+        id: expense.id,
+        dayId: expense.day_id,
+        userId: expense.user_id,
+        userName: profile?.user_name || "Unknown User",
+        amount: expense.amount,
+        description: expense.description || "",
+        createdAt: expense.created_at
+      };
+    });
+  } catch (error) {
+    console.error("Error fetching extra expenses:", error);
+    return [];
+  }
+}
+
+// Add an extra expense
+export async function addExtraExpense(
+  dayId: string, 
+  amount: number, 
+  description: string
+): Promise<boolean> {
+  try {
+    const { data: session } = await supabase.auth.getSession();
+    if (!session?.session?.user) return false;
+
+    const { error } = await supabase
+      .from("extra_expenses")
+      .insert({
+        day_id: dayId,
+        user_id: session.session.user.id,
+        amount,
+        description
+      });
+
+    return !error;
+  } catch (error) {
+    console.error("Error adding extra expense:", error);
+    return false;
+  }
+}
+
+// Delete an extra expense
+export async function deleteExtraExpense(expenseId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("extra_expenses")
+      .delete()
+      .eq("id", expenseId);
+
+    return !error;
+  } catch (error) {
+    console.error("Error deleting extra expense:", error);
+    return false;
+  }
+}
+
 // Fetch badminton days for a specific month
 export async function fetchBadmintonDays(
   year: number,
@@ -241,6 +331,8 @@ export async function fetchBadmintonDays(
     const calendarDays: CalendarDay[] = await Promise.all(
       data.map(async (day) => {
         const participants = await fetchDayParticipants(day.id);
+        const expenses = await fetchExtraExpenses(day.id);
+        
         return {
           id: day.id,
           date: new Date(day.date).toISOString(),
@@ -254,6 +346,7 @@ export async function fetchBadmintonDays(
           maxMembers: day.max_members,
           sessionCost: day.session_cost,
           sessionTime: day.session_time,
+          extraExpenses: expenses
         };
       })
     );

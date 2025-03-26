@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import {
   CalendarDay,
@@ -5,12 +6,16 @@ import {
   getDayName,
   formatDate,
   formatCurrency,
+  calculatePaymentAmount,
+  getTotalParticipantsInDay,
+  getParticipantCount,
+  getTotalExtraExpenses
 } from "@/utils/schedulerUtils";
 import { toast } from "sonner";
 import { toggleParticipation, markPaymentStatus } from "@/utils/apiUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Check, X, Calendar as CalendarIcon, CreditCard } from "lucide-react";
+import { Check, X, Calendar as CalendarIcon, CreditCard, PlusCircle } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -18,8 +23,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-
 import ClickableAvatar from "@/components/ClickableAvatar";
+import ExtraExpenseForm from "@/components/ExtraExpenseForm";
 
 interface CalendarProps {
   days: CalendarDay[];
@@ -67,27 +72,11 @@ const Calendar: React.FC<CalendarProps> = ({
     return members.some((member) => member.id === user?.id && member.isCore);
   };
 
-  const getParticipantCount = (day: CalendarDay, userId: string): number => {
-    const slot = day.slots.find((s) => s[0] === userId);
-    return slot ? slot[1] : 1;
-  };
-
-  const getTotalParticipantsInDay = (day: CalendarDay): number => {
-    return day.slots.reduce((total, slot) => total + slot[1], 0);
-  };
-
-  const calculatePaymentAmount = (day: CalendarDay, userId: string): number => {
-    if (!day.members.includes(userId)) return 0;
-
-    const totalParticipants = getTotalParticipantsInDay(day);
-
-    if (totalParticipants === 0) return 0;
-
-    const memberParticipantCount = getParticipantCount(day, userId);
-
-    return (
-      ((day.sessionCost || 260000) / totalParticipants) * memberParticipantCount
+  const handleUpdateDay = (updatedDay: CalendarDay) => {
+    const updatedDays = days.map(day => 
+      day.id === updatedDay.id ? updatedDay : day
     );
+    onUpdateDays(updatedDays);
   };
 
   const handleToggleParticipation = async (
@@ -330,6 +319,10 @@ const Calendar: React.FC<CalendarProps> = ({
             const isDisabled = !day.isActive;
 
             const totalParticipants = getTotalParticipantsInDay(day);
+            const totalExtraExpenses = getTotalExtraExpenses(day);
+            const extraExpensesPerPerson = totalParticipants > 0 
+              ? totalExtraExpenses / totalParticipants 
+              : 0;
 
             return (
               <div
@@ -370,6 +363,29 @@ const Calendar: React.FC<CalendarProps> = ({
                   </div>
                 </div>
 
+                {/* Session cost info */}
+                <div className="mb-3 bg-badminton/5 rounded-lg p-2 text-xs">
+                  <div className="flex justify-between">
+                    <span>Chi phí sân:</span>
+                    <span className="font-medium">{formatCurrency(day.sessionCost || 260000)}</span>
+                  </div>
+                  
+                  {totalExtraExpenses > 0 && (
+                    <>
+                      <div className="flex justify-between mt-1">
+                        <span>Chi phí phát sinh:</span>
+                        <span className="font-medium">{formatCurrency(totalExtraExpenses)}</span>
+                      </div>
+                      <div className="flex justify-between mt-1">
+                        <span>Chi phí / người:</span>
+                        <span className="font-medium">
+                          {formatCurrency((day.sessionCost || 260000) / totalParticipants + extraExpensesPerPerson)}
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <h3 className="text-sm font-medium">Người tham gia:</h3>
                   {day.members.length > 0 ? (
@@ -378,14 +394,8 @@ const Calendar: React.FC<CalendarProps> = ({
                       if (!memberData) return null;
                       const memberHasPaid = day.paidMembers.includes(memberId);
 
-                      const participantCount = getParticipantCount(
-                        day,
-                        memberId
-                      );
-                      const paymentAmount = calculatePaymentAmount(
-                        day,
-                        memberId
-                      );
+                      const participantCount = getParticipantCount(day, memberId);
+                      const paymentAmount = calculatePaymentAmount(day, memberId);
 
                       return (
                         <div
@@ -456,16 +466,20 @@ const Calendar: React.FC<CalendarProps> = ({
                   )}
                 </div>
 
+                {/* Extra expenses section */}
+                <ExtraExpenseForm 
+                  day={day}
+                  onUpdateDay={(updatedDay) => handleUpdateDay(updatedDay)}
+                />
+
                 {user && (
                   <div className="mt-4 space-y-2">
                     {isParticipating ? (
                       <div className="flex flex-col gap-2">
                         <div className="text-sm text-center mb-1">
                           <span className="font-medium">Số tiền cần trả: </span>
-                          <span className="text-badminton font-semibold">
-                            {formatCurrency(
-                              calculatePaymentAmount(day, user.id)
-                            )}
+                          <span className={`font-semibold ${calculatePaymentAmount(day, user.id) < 0 ? 'text-green-600' : 'text-badminton'}`}>
+                            {formatCurrency(calculatePaymentAmount(day, user.id))}
                           </span>
                           <span className="text-xs text-muted-foreground ml-1">
                             ({getParticipantCount(day, user.id)} người)
