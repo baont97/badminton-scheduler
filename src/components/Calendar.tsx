@@ -401,7 +401,8 @@ const Calendar: React.FC<CalendarProps> = ({
                     day.members.map((memberId) => {
                       const memberData = members.find((m) => m.id === memberId);
                       if (!memberData) return null;
-                      const memberHasPaid = day.paidMembers.includes(memberId);
+                      const memberHasPaid =
+                        day.paidMembers.includes(memberId) || memberData.isCore;
 
                       const participantCount = getParticipantCount(
                         day,
@@ -460,7 +461,7 @@ const Calendar: React.FC<CalendarProps> = ({
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <Badge className="bg-badminton text-white border-none text-[10px] py-0 px-1 h-4">
+                                    <Badge className="bg-badminton text-white text-[10px]">
                                       CỨNG
                                     </Badge>
                                   </TooltipTrigger>
