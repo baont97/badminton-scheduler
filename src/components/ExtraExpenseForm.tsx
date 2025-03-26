@@ -30,7 +30,8 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isAdmin = profile?.is_admin === true;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -205,18 +206,16 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
                     {formatCurrency(expense.amount)}
                   </TableCell>
                   <TableCell className="text-right">
-                    {user?.id === expense.userId && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 ml-2 text-destructive"
-                        onClick={() => handleDeleteExpense(expense.id)}
-                        disabled={loading}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        <span className="sr-only">Xóa</span>
-                      </Button>
-                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 ml-2 text-destructive"
+                      onClick={() => handleDeleteExpense(expense.id)}
+                      disabled={loading || user?.id !== expense.userId}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Xóa</span>
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

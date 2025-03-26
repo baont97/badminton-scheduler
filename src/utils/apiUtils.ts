@@ -234,32 +234,44 @@ export interface ExtraExpense {
 // Fetch extra expenses for a day
 export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]> {
   try {
-    // Use direct fetch with the custom function endpoint instead of rpc
-    const { data, error } = await supabase.functions.invoke<{
-      id: string;
-      day_id: string;
-      user_id: string;
-      user_name: string;
-      amount: number;
-      description: string | null;
-      created_at: string;
-    }[]>("get-extra-expenses", {
-      body: { day_id: dayId }
-    });
+    // Direct query instead of using the edge function
+    const { data: expenses, error } = await supabase
+      .from('extra_expenses')
+      .select('id, day_id, user_id, amount, description, created_at')
+      .eq('day_id', dayId);
 
     if (error) {
       console.error("Error fetching expenses:", error);
       throw error;
     }
 
-    if (!data) return [];
+    if (!expenses || expenses.length === 0) return [];
+
+    // Get profiles data for user names
+    const userIds = Array.from(new Set(expenses.map(expense => expense.user_id)));
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, user_name')
+      .in('id', userIds);
+
+    if (profilesError) {
+      console.error("Error fetching profiles:", profilesError);
+    }
+
+    // Create a map of user IDs to names
+    const userNameMap = new Map();
+    if (profiles) {
+      profiles.forEach(profile => {
+        userNameMap.set(profile.id, profile.user_name || "Unknown User");
+      });
+    }
 
     // Transform the data to match our ExtraExpense interface
-    return data.map((expense) => ({
+    return expenses.map((expense) => ({
       id: expense.id,
       dayId: expense.day_id,
       userId: expense.user_id,
-      userName: expense.user_name || "Unknown User",
+      userName: userNameMap.get(expense.user_id) || "Unknown User",
       amount: expense.amount,
       description: expense.description || "",
       createdAt: expense.created_at
