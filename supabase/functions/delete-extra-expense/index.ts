@@ -37,6 +37,15 @@ Deno.serve(async (req) => {
 
     if (fetchError) {
       console.error('Error fetching expense:', fetchError)
+      
+      // If the expense doesn't exist, consider it successfully deleted
+      if (fetchError.code === 'PGRST116') {
+        return new Response(
+          JSON.stringify(true),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        )
+      }
+      
       return new Response(
         JSON.stringify({ error: fetchError.message }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
@@ -63,8 +72,16 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if the current user is the owner of the expense
-    if (userData.user.id !== expenseData.user_id) {
+    // Check if the current user is the owner of the expense or an admin
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', userData.user.id)
+      .single()
+    
+    const isAdmin = profileData?.is_admin === true
+    
+    if (!isAdmin && userData.user.id !== expenseData.user_id) {
       return new Response(
         JSON.stringify({ error: 'You can only delete your own expenses' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 403 }
@@ -85,6 +102,8 @@ Deno.serve(async (req) => {
       )
     }
 
+    console.log(`Expense ${expense_id} successfully deleted by user ${userData.user.id}`)
+    
     return new Response(
       JSON.stringify(true),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
