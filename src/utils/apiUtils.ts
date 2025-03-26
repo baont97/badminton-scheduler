@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Member, CalendarDay } from "./schedulerUtils";
 
@@ -233,35 +234,25 @@ export interface ExtraExpense {
 // Fetch extra expenses for a day
 export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]> {
   try {
+    // Use raw SQL query to get around type issues
     const { data: expenses, error } = await supabase
-      .from("extra_expenses")
-      .select("*")
-      .eq("day_id", dayId);
+      .rpc('get_extra_expenses', { day_id_param: dayId });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching expenses:", error);
+      throw error;
+    }
 
-    // Fetch user names for the expenses
-    const userIds = [...new Set(expenses.map(expense => expense.user_id))];
-    const { data: profiles, error: profilesError } = await supabase
-      .from("profiles")
-      .select("id, user_name")
-      .in("id", userIds);
-
-    if (profilesError) throw profilesError;
-
-    // Map the expenses with user names
-    return expenses.map(expense => {
-      const profile = profiles.find(p => p.id === expense.user_id);
-      return {
-        id: expense.id,
-        dayId: expense.day_id,
-        userId: expense.user_id,
-        userName: profile?.user_name || "Unknown User",
-        amount: expense.amount,
-        description: expense.description || "",
-        createdAt: expense.created_at
-      };
-    });
+    // Transform the data to match our ExtraExpense interface
+    return expenses.map((expense: any) => ({
+      id: expense.id,
+      dayId: expense.day_id,
+      userId: expense.user_id,
+      userName: expense.user_name || "Unknown User",
+      amount: expense.amount,
+      description: expense.description || "",
+      createdAt: expense.created_at
+    }));
   } catch (error) {
     console.error("Error fetching extra expenses:", error);
     return [];
@@ -278,14 +269,13 @@ export async function addExtraExpense(
     const { data: session } = await supabase.auth.getSession();
     if (!session?.session?.user) return false;
 
-    const { error } = await supabase
-      .from("extra_expenses")
-      .insert({
-        day_id: dayId,
-        user_id: session.session.user.id,
-        amount,
-        description
-      });
+    // Use raw SQL to insert expense
+    const { error } = await supabase.rpc('add_extra_expense', {
+      day_id_param: dayId,
+      user_id_param: session.session.user.id,
+      amount_param: amount,
+      description_param: description
+    });
 
     return !error;
   } catch (error) {
@@ -297,10 +287,10 @@ export async function addExtraExpense(
 // Delete an extra expense
 export async function deleteExtraExpense(expenseId: string): Promise<boolean> {
   try {
-    const { error } = await supabase
-      .from("extra_expenses")
-      .delete()
-      .eq("id", expenseId);
+    // Use raw SQL to delete expense
+    const { error } = await supabase.rpc('delete_extra_expense', {
+      expense_id_param: expenseId
+    });
 
     return !error;
   } catch (error) {
