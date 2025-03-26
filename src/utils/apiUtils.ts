@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Member, CalendarDay } from "./schedulerUtils";
 
@@ -233,21 +234,18 @@ export interface ExtraExpense {
 // Fetch extra expenses for a day
 export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]> {
   try {
-    // Use typed cast to get around type issues with custom RPC functions
-    const { data, error } = await supabase.rpc('get_extra_expenses', { 
-      day_id_param: dayId 
-    }) as unknown as { 
-      data: {
-        id: string;
-        day_id: string;
-        user_id: string;
-        user_name: string;
-        amount: number;
-        description: string | null;
-        created_at: string;
-      }[],
-      error: any
-    };
+    // Use direct fetch with the custom function endpoint instead of rpc
+    const { data, error } = await supabase.functions.invoke<{
+      id: string;
+      day_id: string;
+      user_id: string;
+      user_name: string;
+      amount: number;
+      description: string | null;
+      created_at: string;
+    }[]>("get-extra-expenses", {
+      body: { day_id: dayId }
+    });
 
     if (error) {
       console.error("Error fetching expenses:", error);
@@ -282,13 +280,15 @@ export async function addExtraExpense(
     const { data: session } = await supabase.auth.getSession();
     if (!session?.session?.user) return false;
 
-    // Use type casting for custom RPC function
-    const { data, error } = await supabase.rpc('add_extra_expense', {
-      day_id_param: dayId,
-      user_id_param: session.session.user.id,
-      amount_param: amount,
-      description_param: description
-    }) as unknown as { data: boolean, error: any };
+    // Use direct fetch with the custom function endpoint
+    const { data, error } = await supabase.functions.invoke<boolean>("add-extra-expense", {
+      body: {
+        day_id: dayId,
+        user_id: session.session.user.id,
+        amount: amount,
+        description: description
+      }
+    });
 
     if (error) {
       console.error("Error adding expense:", error);
@@ -305,10 +305,10 @@ export async function addExtraExpense(
 // Delete an extra expense
 export async function deleteExtraExpense(expenseId: string): Promise<boolean> {
   try {
-    // Use type casting for custom RPC function
-    const { data, error } = await supabase.rpc('delete_extra_expense', {
-      expense_id_param: expenseId
-    }) as unknown as { data: boolean, error: any };
+    // Use direct fetch with the custom function endpoint
+    const { data, error } = await supabase.functions.invoke<boolean>("delete-extra-expense", {
+      body: { expense_id: expenseId }
+    });
 
     if (error) {
       console.error("Error deleting expense:", error);
