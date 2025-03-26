@@ -120,6 +120,41 @@ export type Database = {
         }
         Relationships: []
       }
+      extra_expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          day_id: string
+          description: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          day_id: string
+          description?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          day_id?: string
+          description?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extra_expenses_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "badminton_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null

@@ -235,7 +235,7 @@ export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]>
   try {
     const { data: expenses, error } = await supabase
       .from("extra_expenses")
-      .select("id, day_id, user_id, amount, description, created_at")
+      .select("*")
       .eq("day_id", dayId);
 
     if (error) throw error;
