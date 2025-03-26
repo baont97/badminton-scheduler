@@ -1,11 +1,14 @@
-
 import { useState } from "react";
 import { CalendarDay, formatCurrency } from "@/utils/schedulerUtils";
-import { addExtraExpense, deleteExtraExpense, ExtraExpense } from "@/utils/apiUtils";
+import {
+  addExtraExpense,
+  deleteExtraExpense,
+  ExtraExpense,
+} from "@/utils/apiUtils";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, X, Coins, Edit, Trash2 } from "lucide-react";
+import { PlusCircle, Coins, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -28,22 +31,26 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const { user } = useAuth();
-  
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
       toast.error("Vui lòng nhập số tiền hợp lệ");
       return;
     }
-    
+
     setLoading(true);
     try {
-      const success = await addExtraExpense(day.id, Number(amount), description);
-      
+      const success = await addExtraExpense(
+        day.id,
+        Number(amount),
+        description
+      );
+
       if (success) {
         toast.success("Thêm chi phí phát sinh thành công");
-        
+
         // Add the new expense to the day's expenses
         const newExpense: ExtraExpense = {
           id: crypto.randomUUID(), // Temporary ID until refresh
@@ -52,14 +59,14 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
           userName: user?.user_metadata?.user_name || "You",
           amount: Number(amount),
           description,
-          createdAt: new Date().toISOString()
+          createdAt: new Date().toISOString(),
         };
-        
+
         const updatedDay = {
           ...day,
-          extraExpenses: [...(day.extraExpenses || []), newExpense]
+          extraExpenses: [...(day.extraExpenses || []), newExpense],
         };
-        
+
         onUpdateDay(updatedDay);
         setAmount("");
         setDescription("");
@@ -74,25 +81,27 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
       setLoading(false);
     }
   };
-  
+
   const handleDeleteExpense = async (expenseId: string) => {
     if (!user) {
       toast.error("Bạn cần đăng nhập để xóa chi phí phát sinh");
       return;
     }
-    
+
     setLoading(true);
     try {
       const success = await deleteExtraExpense(expenseId);
-      
+
       if (success) {
         toast.success("Đã xóa chi phí phát sinh");
-        
+
         const updatedDay = {
           ...day,
-          extraExpenses: (day.extraExpenses || []).filter(expense => expense.id !== expenseId)
+          extraExpenses: (day.extraExpenses || []).filter(
+            (expense) => expense.id !== expenseId
+          ),
         };
-        
+
         onUpdateDay(updatedDay);
       } else {
         toast.error("Không thể xóa chi phí phát sinh");
@@ -104,7 +113,7 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
       setLoading(false);
     }
   };
-  
+
   return (
     <div className="mt-4 space-y-3 animate-fade-in">
       <div className="flex items-center justify-between">
@@ -113,8 +122,8 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
           Chi phí phát sinh:
         </h3>
         {!showForm && (
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             size="sm"
             className="text-xs border-badminton text-badminton hover:bg-badminton/10"
             onClick={() => setShowForm(true)}
@@ -124,9 +133,12 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
           </Button>
         )}
       </div>
-      
+
       {showForm && (
-        <form onSubmit={handleSubmit} className="space-y-2 p-3 border-l-2 border-badminton rounded-md bg-badminton/5 shadow-sm">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-2 p-3 border-l-2 border-badminton rounded-md bg-badminton/5 shadow-sm"
+        >
           <div>
             <Input
               type="number"
@@ -146,18 +158,18 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
             />
           </div>
           <div className="flex justify-between gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               className="w-1/2"
               type="button"
               onClick={() => setShowForm(false)}
             >
               Hủy
             </Button>
-            <Button 
-              type="submit" 
-              size="sm" 
+            <Button
+              type="submit"
+              size="sm"
               className="w-1/2 bg-badminton hover:bg-badminton/90"
               disabled={loading}
             >
@@ -167,7 +179,7 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
           </div>
         </form>
       )}
-      
+
       {day.extraExpenses && day.extraExpenses.length > 0 ? (
         <div className="rounded-md border overflow-hidden shadow-sm">
           <Table>
@@ -184,7 +196,9 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
                   <TableCell className="font-medium">
                     {expense.userName}
                     {expense.description && (
-                      <p className="text-xs text-muted-foreground">{expense.description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {expense.description}
+                      </p>
                     )}
                   </TableCell>
                   <TableCell className="text-right font-semibold text-badminton">
@@ -192,9 +206,9 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
                   </TableCell>
                   <TableCell className="text-right">
                     {user?.id === expense.userId && (
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="h-7 w-7 p-0 ml-2 text-destructive"
                         onClick={() => handleDeleteExpense(expense.id)}
                         disabled={loading}

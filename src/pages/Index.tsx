@@ -29,6 +29,7 @@ const Index = () => {
     data: calendarData,
     isLoading: calendarLoading,
     error: calendarError,
+    refetch: refreshCalendarData,
   } = useQuery({
     queryKey: ["badminton-days", currentYear, currentMonth],
     queryFn: () => fetchBadmintonDays(currentYear, currentMonth),
@@ -109,6 +110,7 @@ const Index = () => {
             currentMonth={currentMonth}
             currentYear={currentYear}
             onChangeMonth={changeMonth}
+            refreshData={refreshCalendarData}
           />
         </div>
         <div>
