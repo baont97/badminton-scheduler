@@ -18,7 +18,8 @@ export interface CalendarDay {
   maxMembers: number;
   sessionCost: number;
   sessionTime: string;
-  extraExpenses?: ExtraExpense[];
+  extraExpenses: ExtraExpense[];
+  _removedCoreMembers?: string[];
 }
 
 export const getDayName = (dayOfWeek: number): string => {

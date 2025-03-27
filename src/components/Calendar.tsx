@@ -94,6 +94,7 @@ const Calendar: React.FC<CalendarProps> = ({
     }
 
     const isMemberInDay = day.members.includes(user.id);
+    const isUserCoreMember = members.some(m => m.id === user?.id && m.isCore);
 
     const currentTotal = getTotalParticipantsInDay(day);
 
@@ -123,6 +124,11 @@ const Calendar: React.FC<CalendarProps> = ({
       const actualDayIndex = days.findIndex((d) => d.id === day.id);
 
       if (isMemberInDay) {
+        // If a core member is canceling, track this to prevent auto re-adding
+        const removedCoreMembers = isUserCoreMember 
+          ? [...(day._removedCoreMembers || []), user.id]
+          : day._removedCoreMembers;
+          
         updatedDays[actualDayIndex] = {
           ...days[actualDayIndex],
           members: days[actualDayIndex].members.filter((id) => id !== user.id),
@@ -130,12 +136,24 @@ const Calendar: React.FC<CalendarProps> = ({
             (id) => id !== user.id
           ),
           slots: days[actualDayIndex].slots.filter((s) => s[0] !== user.id),
+          _removedCoreMembers: removedCoreMembers
         };
+        
+        if (isUserCoreMember) {
+          toast.success("Đã hủy tham gia thành công. Bạn sẽ không được tự động thêm lại cho ngày này.");
+        }
       } else {
+        // If a core member is joining again, remove from the removed list
+        let removedCoreMembers = day._removedCoreMembers;
+        if (isUserCoreMember && removedCoreMembers?.includes(user.id)) {
+          removedCoreMembers = removedCoreMembers.filter(id => id !== user.id);
+        }
+        
         updatedDays[actualDayIndex] = {
           ...days[actualDayIndex],
           members: [...days[actualDayIndex].members, user.id],
           slots: [...days[actualDayIndex].slots, [user.id, participantCount]],
+          _removedCoreMembers: removedCoreMembers
         };
       }
 
@@ -223,8 +241,11 @@ const Calendar: React.FC<CalendarProps> = ({
 
     let needsUpdate = false;
     const updatedDays = days.map((day) => {
+      // Only auto-add core members if they haven't explicitly canceled
       const missingCoreMembers = coreMembers.filter(
-        (id) => !day.members.includes(id)
+        (id) => !day.members.includes(id) && 
+        // Check if user hasn't manually removed themselves
+        !day._removedCoreMembers?.includes(id)
       );
 
       if (missingCoreMembers.length > 0) {
