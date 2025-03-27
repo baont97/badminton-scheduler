@@ -95,12 +95,6 @@ const Calendar: React.FC<CalendarProps> = ({
 
     const isMemberInDay = day.members.includes(user.id);
 
-    const member = members.find((m) => m.id === user.id);
-    if (isMemberInDay && member?.isCore) {
-      toast.error("Thành viên cứng không thể hủy tham gia");
-      return;
-    }
-
     const currentTotal = getTotalParticipantsInDay(day);
 
     const userCurrentCount = isMemberInDay
@@ -365,7 +359,6 @@ const Calendar: React.FC<CalendarProps> = ({
                   </div>
                 </div>
 
-                {/* Session cost info */}
                 <div className="mb-3 bg-badminton/5 rounded-lg p-2 text-xs">
                   <div className="flex justify-between">
                     <span>Chi phí sân:</span>
@@ -482,7 +475,6 @@ const Calendar: React.FC<CalendarProps> = ({
                   )}
                 </div>
 
-                {/* Extra expenses section */}
                 <ExtraExpenseForm
                   day={day}
                   onUpdateDay={(updatedDay) => handleUpdateDay(updatedDay)}
@@ -540,7 +532,7 @@ const Calendar: React.FC<CalendarProps> = ({
                             className="w-full border-red-500 text-red-500 hover:bg-red-50"
                             onClick={() => handleToggleParticipation(dayIndex)}
                             disabled={
-                              loading || isDisabled || (userCore && !isAdmin)
+                              loading || isDisabled
                             }
                           >
                             <X className="h-4 w-4 mr-1" /> Hủy tham gia

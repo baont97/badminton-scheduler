@@ -22,12 +22,19 @@ serve(async (req) => {
     const supabaseAdmin = createClient(supabaseUrl, servicRoleKey);
     
     // Parse request body
-    const { email, password, userName } = await req.json();
+    const body = await req.json();
+    console.log("Request body:", body);
+    
+    // Extract all possible parameter names to handle both variations
+    const email = body.email;
+    const password = body.password;
+    const userName = body.userName || body.fullName; // Handle both parameter names
 
     // Validate input
     if (!email || !password || !userName) {
+      console.log("Validation failed:", { email, password, userName: userName ? "[provided]" : "[missing]" });
       return new Response(
-        JSON.stringify({ error: "Email, password, and userName are required" }),
+        JSON.stringify({ error: "Email, password, and userName are required", body }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
@@ -47,6 +54,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser();
 
     if (authError || !callingUser) {
+      console.log("Auth error:", authError);
       return new Response(
         JSON.stringify({ error: "Unauthorized" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 401 }
@@ -61,6 +69,7 @@ serve(async (req) => {
       .single();
 
     if (adminCheckError || !adminData.is_admin) {
+      console.log("Admin check error:", adminCheckError || "User is not admin");
       return new Response(
         JSON.stringify({ error: "Only admins can create new users" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 403 }
@@ -68,6 +77,7 @@ serve(async (req) => {
     }
 
     // Create new user with email confirmation set to true (no email verification)
+    console.log("Creating user with:", { email, userName });
     const { data, error } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,
@@ -78,9 +88,11 @@ serve(async (req) => {
     });
 
     if (error) {
+      console.log("Error creating user:", error);
       throw error;
     }
 
+    console.log("User created successfully:", data.user.id);
     return new Response(
       JSON.stringify({ success: true, user: data.user }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }

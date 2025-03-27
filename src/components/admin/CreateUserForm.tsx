@@ -42,14 +42,16 @@ const CreateUserForm = () => {
         return;
       }
 
+      console.log("Sending create user request with values:", values);
       const response = await supabase.functions.invoke("create-user", {
         body: {
           email: values.email,
           password: values.password,
-          fullName: values.userName,
+          userName: values.userName,
         },
       });
 
+      console.log("Create user response:", response);
       if (response.error) {
         throw new Error(response.error.message || "Có lỗi xảy ra khi tạo tài khoản");
       }
