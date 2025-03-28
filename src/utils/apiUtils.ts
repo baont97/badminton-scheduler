@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Member, CalendarDay } from "./schedulerUtils";
 
@@ -119,6 +118,11 @@ export async function toggleParticipation(
         .eq("day_id", dayId)
         .eq("user_id", userId);
 
+      // Add to opt-out list
+      await supabase
+        .from("core_member_opt_outs")
+        .upsert({ day_id: dayId, user_id: userId });
+
       return !error;
     } else {
       // Add participation
@@ -128,6 +132,13 @@ export async function toggleParticipation(
         has_paid: false,
         slot,
       });
+
+      // Remove from opt-out list
+      await supabase
+        .from("core_member_opt_outs")
+        .delete()
+        .eq("day_id", dayId)
+        .eq("user_id", userId);
 
       return !error;
     }
@@ -232,13 +243,15 @@ export interface ExtraExpense {
 }
 
 // Fetch extra expenses for a day
-export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]> {
+export async function fetchExtraExpenses(
+  dayId: string
+): Promise<ExtraExpense[]> {
   try {
     // Direct query instead of using the edge function
     const { data: expenses, error } = await supabase
-      .from('extra_expenses')
-      .select('id, day_id, user_id, amount, description, created_at')
-      .eq('day_id', dayId);
+      .from("extra_expenses")
+      .select("id, day_id, user_id, amount, description, created_at")
+      .eq("day_id", dayId);
 
     if (error) {
       console.error("Error fetching expenses:", error);
@@ -248,11 +261,13 @@ export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]>
     if (!expenses || expenses.length === 0) return [];
 
     // Get profiles data for user names
-    const userIds = Array.from(new Set(expenses.map(expense => expense.user_id)));
+    const userIds = Array.from(
+      new Set(expenses.map((expense) => expense.user_id))
+    );
     const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('id, user_name')
-      .in('id', userIds);
+      .from("profiles")
+      .select("id, user_name")
+      .in("id", userIds);
 
     if (profilesError) {
       console.error("Error fetching profiles:", profilesError);
@@ -261,7 +276,7 @@ export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]>
     // Create a map of user IDs to names
     const userNameMap = new Map();
     if (profiles) {
-      profiles.forEach(profile => {
+      profiles.forEach((profile) => {
         userNameMap.set(profile.id, profile.user_name || "Unknown User");
       });
     }
@@ -274,7 +289,7 @@ export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]>
       userName: userNameMap.get(expense.user_id) || "Unknown User",
       amount: expense.amount,
       description: expense.description || "",
-      createdAt: expense.created_at
+      createdAt: expense.created_at,
     }));
   } catch (error) {
     console.error("Error fetching extra expenses:", error);
@@ -284,8 +299,8 @@ export async function fetchExtraExpenses(dayId: string): Promise<ExtraExpense[]>
 
 // Add an extra expense
 export async function addExtraExpense(
-  dayId: string, 
-  amount: number, 
+  dayId: string,
+  amount: number,
   description: string
 ): Promise<boolean> {
   try {
@@ -293,14 +308,17 @@ export async function addExtraExpense(
     if (!session?.session?.user) return false;
 
     // Use direct fetch with the custom function endpoint
-    const { data, error } = await supabase.functions.invoke<boolean>("add-extra-expense", {
-      body: {
-        day_id: dayId,
-        user_id: session.session.user.id,
-        amount: amount,
-        description: description
+    const { data, error } = await supabase.functions.invoke<boolean>(
+      "add-extra-expense",
+      {
+        body: {
+          day_id: dayId,
+          user_id: session.session.user.id,
+          amount: amount,
+          description: description,
+        },
       }
-    });
+    );
 
     if (error) {
       console.error("Error adding expense:", error);
@@ -318,9 +336,12 @@ export async function addExtraExpense(
 export async function deleteExtraExpense(expenseId: string): Promise<boolean> {
   try {
     // Use direct fetch with the custom function endpoint
-    const { data, error } = await supabase.functions.invoke<boolean>("delete-extra-expense", {
-      body: { expense_id: expenseId }
-    });
+    const { data, error } = await supabase.functions.invoke<boolean>(
+      "delete-extra-expense",
+      {
+        body: { expense_id: expenseId },
+      }
+    );
 
     if (error) {
       console.error("Error deleting expense:", error);
@@ -352,12 +373,30 @@ export async function fetchBadmintonDays(
 
     if (error) throw error;
 
+    // Fetch all opt-outs for this month's days
+    const dayIds = data.map((day) => day.id);
+    const { data: optOuts, error: optOutsError } = await supabase
+      .from("core_member_opt_outs")
+      .select("day_id, user_id")
+      .in("day_id", dayIds);
+
+    if (optOutsError) console.error("Error fetching opt-outs:", optOutsError);
+
+    // Group opt-outs by day_id
+    const optOutsByDay = {};
+    if (optOuts) {
+      optOuts.forEach((opt) => {
+        if (!optOutsByDay[opt.day_id]) optOutsByDay[opt.day_id] = [];
+        optOutsByDay[opt.day_id].push(opt.user_id);
+      });
+    }
+
     // Convert to CalendarDay format
     const calendarDays: CalendarDay[] = await Promise.all(
       data.map(async (day) => {
         const participants = await fetchDayParticipants(day.id);
         const expenses = await fetchExtraExpenses(day.id);
-        
+
         return {
           id: day.id,
           date: new Date(day.date).toISOString(),
@@ -371,7 +410,8 @@ export async function fetchBadmintonDays(
           maxMembers: day.max_members,
           sessionCost: day.session_cost,
           sessionTime: day.session_time,
-          extraExpenses: expenses
+          extraExpenses: expenses,
+          _removedCoreMembers: optOutsByDay[day.id] || [],
         };
       })
     );
