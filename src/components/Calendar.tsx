@@ -55,7 +55,56 @@ const Calendar: React.FC<CalendarProps> = ({
   const isAdmin = profile?.is_admin === true;
 
   const isPastDay = (date: string): boolean => {
-    return new Date(date) < new Date();
+    const now = new Date();
+    const dayDate = new Date(date);
+    
+    // Set both dates to start of day for date comparison
+    now.setHours(0, 0, 0, 0);
+    dayDate.setHours(0, 0, 0, 0);
+    
+    return dayDate < now;
+  };
+
+  const isWithinOneHourOfSession = (day: CalendarDay): boolean => {
+    if (!day.sessionTime) return false;
+
+    const [startTime] = day.sessionTime.split("-");
+    const [hours, minutes] = startTime.split(":").map(Number);
+
+    const sessionDate = new Date(day.date);
+    sessionDate.setHours(hours, minutes, 0, 0);
+
+    const oneHourBeforeSession = new Date(
+      sessionDate.getTime() - 60 * 60 * 1000
+    );
+    const now = new Date();
+
+    return now >= oneHourBeforeSession && now < sessionDate;
+  };
+
+  const getRemainingTime = (day: CalendarDay): string | null => {
+    if (!day.sessionTime) return null;
+
+    const [startTime] = day.sessionTime.split("-");
+    const [hours, minutes] = startTime.split(":").map(Number);
+
+    const sessionDate = new Date(day.date);
+    sessionDate.setHours(hours, minutes, 0, 0);
+
+    const now = new Date();
+    const diff = sessionDate.getTime() - now.getTime();
+
+    console.log(diff);
+
+    if (diff <= 0) return null;
+
+    const hoursLeft = Math.floor(diff / (1000 * 60 * 60));
+    const minutesLeft = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+    if (hoursLeft > 0) {
+      return `${hoursLeft} giờ ${minutesLeft} phút`;
+    }
+    return `${minutesLeft} phút`;
   };
 
   const isUserParticipating = (day: CalendarDay): boolean => {
@@ -94,7 +143,15 @@ const Calendar: React.FC<CalendarProps> = ({
     }
 
     const isMemberInDay = day.members.includes(user.id);
-    const isUserCoreMember = members.some(m => m.id === user?.id && m.isCore);
+    const isUserCoreMember = members.some((m) => m.id === user?.id && m.isCore);
+
+    // Check if user is trying to cancel within 1 hour of session start
+    if (isMemberInDay && isWithinOneHourOfSession(day) && !isAdmin) {
+      toast.error(
+        "Không thể hủy tham gia trong vòng 1 tiếng trước giờ đánh cầu"
+      );
+      return;
+    }
 
     const currentTotal = getTotalParticipantsInDay(day);
 
@@ -125,10 +182,10 @@ const Calendar: React.FC<CalendarProps> = ({
 
       if (isMemberInDay) {
         // If a core member is canceling, track this to prevent auto re-adding
-        const removedCoreMembers = isUserCoreMember 
+        const removedCoreMembers = isUserCoreMember
           ? [...(day._removedCoreMembers || []), user.id]
           : day._removedCoreMembers;
-          
+
         updatedDays[actualDayIndex] = {
           ...days[actualDayIndex],
           members: days[actualDayIndex].members.filter((id) => id !== user.id),
@@ -136,24 +193,28 @@ const Calendar: React.FC<CalendarProps> = ({
             (id) => id !== user.id
           ),
           slots: days[actualDayIndex].slots.filter((s) => s[0] !== user.id),
-          _removedCoreMembers: removedCoreMembers
+          _removedCoreMembers: removedCoreMembers,
         };
-        
+
         if (isUserCoreMember) {
-          toast.success("Đã hủy tham gia thành công. Bạn sẽ không được tự động thêm lại cho ngày này.");
+          toast.success(
+            "Đã hủy tham gia thành công. Bạn sẽ không được tự động thêm lại cho ngày này."
+          );
         }
       } else {
         // If a core member is joining again, remove from the removed list
         let removedCoreMembers = day._removedCoreMembers;
         if (isUserCoreMember && removedCoreMembers?.includes(user.id)) {
-          removedCoreMembers = removedCoreMembers.filter(id => id !== user.id);
+          removedCoreMembers = removedCoreMembers.filter(
+            (id) => id !== user.id
+          );
         }
-        
+
         updatedDays[actualDayIndex] = {
           ...days[actualDayIndex],
           members: [...days[actualDayIndex].members, user.id],
           slots: [...days[actualDayIndex].slots, [user.id, participantCount]],
-          _removedCoreMembers: removedCoreMembers
+          _removedCoreMembers: removedCoreMembers,
         };
       }
 
@@ -243,9 +304,10 @@ const Calendar: React.FC<CalendarProps> = ({
     const updatedDays = days.map((day) => {
       // Only auto-add core members if they haven't explicitly canceled
       const missingCoreMembers = coreMembers.filter(
-        (id) => !day.members.includes(id) && 
-        // Check if user hasn't manually removed themselves
-        !day._removedCoreMembers?.includes(id)
+        (id) =>
+          !day.members.includes(id) &&
+          // Check if user hasn't manually removed themselves
+          !day._removedCoreMembers?.includes(id)
       );
 
       if (missingCoreMembers.length > 0) {
@@ -331,7 +393,6 @@ const Calendar: React.FC<CalendarProps> = ({
             const isParticipating = isUserParticipating(day);
             const hasPaid = hasUserPaid(day);
             const isPast = isPastDay(day.date);
-            const userCore = isUserCore();
             const isDisabled = !day.isActive;
 
             const totalParticipants = getTotalParticipantsInDay(day);
@@ -387,6 +448,13 @@ const Calendar: React.FC<CalendarProps> = ({
                       {formatCurrency(day.sessionCost || 260000)}
                     </span>
                   </div>
+
+                  {day.sessionTime && (
+                    <div className="flex justify-between mt-1">
+                      <span>Thời gian:</span>
+                      <span className="font-medium">{day.sessionTime}</span>
+                    </div>
+                  )}
 
                   {totalExtraExpenses > 0 && (
                     <>
@@ -552,11 +620,14 @@ const Calendar: React.FC<CalendarProps> = ({
                             size="sm"
                             className="w-full border-red-500 text-red-500 hover:bg-red-50"
                             onClick={() => handleToggleParticipation(dayIndex)}
-                            disabled={
-                              loading || isDisabled
-                            }
+                            disabled={loading || isDisabled}
                           >
                             <X className="h-4 w-4 mr-1" /> Hủy tham gia
+                            {isParticipating && getRemainingTime(day) && (
+                              <span className="ml-2 text-xs">
+                                (còn {getRemainingTime(day)})
+                              </span>
+                            )}
                           </Button>
                         )}
                       </div>
