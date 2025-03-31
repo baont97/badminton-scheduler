@@ -28,6 +28,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
+import { Receipt } from "lucide-react";
+
+import BillModal from "@/components/BillModal";
 import ClickableAvatar from "@/components/ClickableAvatar";
 import ExtraExpenseForm from "@/components/ExtraExpenseForm";
 
@@ -57,11 +60,11 @@ const Calendar: React.FC<CalendarProps> = ({
   const isPastDay = (date: string): boolean => {
     const now = new Date();
     const dayDate = new Date(date);
-    
+
     // Set both dates to start of day for date comparison
     now.setHours(0, 0, 0, 0);
     dayDate.setHours(0, 0, 0, 0);
-    
+
     return dayDate < now;
   };
 
@@ -115,8 +118,35 @@ const Calendar: React.FC<CalendarProps> = ({
     return user ? day.paidMembers.includes(user.id) : false;
   };
 
-  const isUserCore = (): boolean => {
-    return members.some((member) => member.id === user?.id && member.isCore);
+  const isAfterGameTimeWithBuffer = (
+    date: string,
+    sessionTime: string
+  ): boolean => {
+    const gameDate = new Date(date);
+
+    // Extract end time from session_time format (e.g., "19:00-21:00")
+    const endTimeString = sessionTime.split("-")[1]?.trim() || "21:00"; // Default to 21:00
+    const [hours, minutes] = endTimeString.split(":").map(Number);
+
+    // Set the game end time
+    gameDate.setHours(hours, minutes, 0, 0);
+
+    // Add 2 hours buffer
+    gameDate.setHours(gameDate.getHours() + 2);
+
+    // Compare current time with buffered time
+    return new Date() > gameDate;
+  };
+
+  // Add these state variables to your Calendar component
+  const [selectedDayForBill, setSelectedDayForBill] =
+    useState<CalendarDay | null>(null);
+  const [billModalOpen, setBillModalOpen] = useState(false);
+
+  // Add this function to handle opening the bill modal
+  const handleOpenBill = (day: CalendarDay) => {
+    setSelectedDayForBill(day);
+    setBillModalOpen(true);
   };
 
   const handleUpdateDay = (updatedDay: CalendarDay) => {
@@ -686,10 +716,32 @@ const Calendar: React.FC<CalendarProps> = ({
                     )}
                   </div>
                 )}
+
+                <div className="mt-3 flex justify-center">
+                  {isAfterGameTimeWithBuffer(day.date, day.sessionTime) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs border-badminton text-badminton hover:bg-badminton/10"
+                      onClick={() => handleOpenBill(day)}
+                    >
+                      <Receipt className="h-3.5 w-3.5 mr-1" />
+                      Xem hóa đơn
+                    </Button>
+                  )}
+                </div>
               </div>
             );
           })}
         </div>
+      )}
+      {selectedDayForBill && (
+        <BillModal
+          isOpen={billModalOpen}
+          onClose={() => setBillModalOpen(false)}
+          day={selectedDayForBill}
+          members={members}
+        />
       )}
     </div>
   );
