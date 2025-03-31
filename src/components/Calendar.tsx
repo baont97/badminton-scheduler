@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Receipt } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 import BillModal from "@/components/BillModal";
 import ClickableAvatar from "@/components/ClickableAvatar";
@@ -54,6 +56,7 @@ const Calendar: React.FC<CalendarProps> = ({
   refreshData,
 }) => {
   const [loading, setLoading] = useState(false);
+  const [hidePaidDays, setHidePaidDays] = useState(true);
   const { user, profile } = useAuth();
   const isAdmin = profile?.is_admin === true;
 
@@ -379,6 +382,17 @@ const Calendar: React.FC<CalendarProps> = ({
     return `Tháng ${month}`;
   };
 
+  // Add helper function to check if all members have paid
+  const isAllMembersPaid = (day: CalendarDay): boolean => {
+    if (day.members.length === 0) return false;
+    if (!isPastDay(day.date)) return false;
+    
+    return day.members.every((memberId) => {
+      const memberData = members.find((m) => m.id === memberId);
+      return day.paidMembers.includes(memberId) || memberData?.isCore;
+    });
+  };
+
   return (
     <div className="glass-card p-6 animate-fade-in">
       <div className="flex justify-between items-center mb-4">
@@ -388,22 +402,32 @@ const Calendar: React.FC<CalendarProps> = ({
             <RefreshCw />
           </button>
         </h2>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handlePreviousMonth}
-            disabled={
-              !isAdmin &&
-              new Date().getMonth() + 1 === currentMonth &&
-              new Date().getFullYear() === currentYear
-            }
-          >
-            Tháng trước
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleNextMonth}>
-            Tháng sau
-          </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="hide-paid-days"
+              checked={hidePaidDays}
+              onCheckedChange={setHidePaidDays}
+            />
+            <Label htmlFor="hide-paid-days">Ẩn ngày đã thanh toán</Label>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handlePreviousMonth}
+              disabled={
+                !isAdmin &&
+                new Date().getMonth() + 1 === currentMonth &&
+                new Date().getFullYear() === currentYear
+              }
+            >
+              Tháng trước
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleNextMonth}>
+              Tháng sau
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -419,320 +443,325 @@ const Calendar: React.FC<CalendarProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          {days.map((day, dayIndex) => {
-            const isParticipating = isUserParticipating(day);
-            const hasPaid = hasUserPaid(day);
-            const isPast = isPastDay(day.date);
-            const isDisabled = !day.isActive;
+          {days
+            .filter((day) => {
+              const allPaid = isAllMembersPaid(day);
+              return !hidePaidDays || !allPaid;
+            })
+            .map((day, dayIndex) => {
+              const isParticipating = isUserParticipating(day);
+              const hasPaid = hasUserPaid(day);
+              const isPast = isPastDay(day.date);
+              const isDisabled = !day.isActive;
 
-            const totalParticipants = getTotalParticipantsInDay(day);
-            const totalExtraExpenses = getTotalExtraExpenses(day);
-            const extraExpensesPerPerson =
-              totalParticipants > 0
-                ? totalExtraExpenses / totalParticipants
-                : 0;
+              const totalParticipants = getTotalParticipantsInDay(day);
+              const totalExtraExpenses = getTotalExtraExpenses(day);
+              const extraExpensesPerPerson =
+                totalParticipants > 0
+                  ? totalExtraExpenses / totalParticipants
+                  : 0;
 
-            return (
-              <div
-                key={dayIndex}
-                className={`calendar-day p-4 ${
-                  day.isActive ? "calendar-day-active" : "bg-gray-200"
-                } 
-                  ${isDisabled ? "opacity-70 cursor-not-allowed" : ""}`}
-              >
-                <div className="flex justify-between items-center mb-3">
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      day.isActive
-                        ? "bg-badminton text-white"
-                        : "bg-gray-400 text-white"
-                    }`}
-                  >
-                    {getDayName(day.dayOfWeek)}
-                  </span>
-                  <span className="text-sm font-semibold">
-                    {formatDate(day.date)}
-                  </span>
-                </div>
-
-                <div className="mb-2">
-                  <p className="text-xs text-muted-foreground">
-                    {totalParticipants}/{day.maxMembers} người tham gia
-                  </p>
-                  <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                    <div
-                      className={`h-1.5 rounded-full transition-all duration-300 ease-out ${
-                        day.isActive ? "bg-badminton" : "bg-gray-400"
+              return (
+                <div
+                  key={dayIndex}
+                  className={`calendar-day p-4 ${
+                    day.isActive ? "calendar-day-active" : "bg-gray-200"
+                  } 
+                    ${isDisabled ? "opacity-70 cursor-not-allowed" : ""}`}
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <span
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        day.isActive
+                          ? "bg-badminton text-white"
+                          : "bg-gray-400 text-white"
                       }`}
-                      style={{
-                        width: `${(totalParticipants / day.maxMembers) * 100}%`,
-                      }}
-                    ></div>
-                  </div>
-                </div>
-
-                <div className="mb-3 bg-badminton/5 rounded-lg p-2 text-xs">
-                  <div className="flex justify-between">
-                    <span>Chi phí sân:</span>
-                    <span className="font-medium">
-                      {formatCurrency(day.sessionCost || 260000)}
+                    >
+                      {getDayName(day.dayOfWeek)}
+                    </span>
+                    <span className="text-sm font-semibold">
+                      {formatDate(day.date)}
                     </span>
                   </div>
 
-                  {day.sessionTime && (
-                    <div className="flex justify-between mt-1">
-                      <span>Thời gian:</span>
-                      <span className="font-medium">{day.sessionTime}</span>
+                  <div className="mb-2">
+                    <p className="text-xs text-muted-foreground">
+                      {totalParticipants}/{day.maxMembers} người tham gia
+                    </p>
+                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                      <div
+                        className={`h-1.5 rounded-full transition-all duration-300 ease-out ${
+                          day.isActive ? "bg-badminton" : "bg-gray-400"
+                        }`}
+                        style={{
+                          width: `${(totalParticipants / day.maxMembers) * 100}%`,
+                        }}
+                      ></div>
                     </div>
-                  )}
+                  </div>
 
-                  {totalExtraExpenses > 0 && (
-                    <>
+                  <div className="mb-3 bg-badminton/5 rounded-lg p-2 text-xs">
+                    <div className="flex justify-between">
+                      <span>Chi phí sân:</span>
+                      <span className="font-medium">
+                        {formatCurrency(day.sessionCost || 260000)}
+                      </span>
+                    </div>
+
+                    {day.sessionTime && (
                       <div className="flex justify-between mt-1">
-                        <span>Chi phí phát sinh:</span>
-                        <span className="font-medium">
-                          {formatCurrency(totalExtraExpenses)}
-                        </span>
+                        <span>Thời gian:</span>
+                        <span className="font-medium">{day.sessionTime}</span>
                       </div>
-                      <div className="flex justify-between mt-1">
-                        <span>Chi phí / người:</span>
-                        <span className="font-medium">
-                          {formatCurrency(
-                            (day.sessionCost || 260000) / totalParticipants +
-                              extraExpensesPerPerson
-                          )}
-                        </span>
-                      </div>
-                    </>
-                  )}
-                </div>
+                    )}
 
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Người tham gia:</h3>
-                  {day.members.length > 0 ? (
-                    day.members.map((memberId) => {
-                      const memberData = members.find((m) => m.id === memberId);
-                      if (!memberData) return null;
-                      const memberHasPaid =
-                        day.paidMembers.includes(memberId) || memberData.isCore;
+                    {totalExtraExpenses > 0 && (
+                      <>
+                        <div className="flex justify-between mt-1">
+                          <span>Chi phí phát sinh:</span>
+                          <span className="font-medium">
+                            {formatCurrency(totalExtraExpenses)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between mt-1">
+                          <span>Chi phí / người:</span>
+                          <span className="font-medium">
+                            {formatCurrency(
+                              (day.sessionCost || 260000) / totalParticipants +
+                                extraExpensesPerPerson
+                            )}
+                          </span>
+                        </div>
+                      </>
+                    )}
+                  </div>
 
-                      const participantCount = getParticipantCount(
-                        day,
-                        memberId
-                      );
-                      const paymentAmount = calculatePaymentAmount(
-                        day,
-                        memberId
-                      );
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Người tham gia:</h3>
+                    {day.members.length > 0 ? (
+                      day.members.map((memberId) => {
+                        const memberData = members.find((m) => m.id === memberId);
+                        if (!memberData) return null;
+                        const memberHasPaid =
+                          day.paidMembers.includes(memberId) || memberData.isCore;
 
-                      return (
-                        <div
-                          key={memberId}
-                          className="flex items-center justify-between p-2 rounded-lg bg-badminton bg-opacity-10"
-                        >
-                          <div className="flex items-center">
-                            <ClickableAvatar
-                              name={memberData.name || ""}
-                              imageUrl={memberData.avatarUrl}
-                              size="sm"
-                              className="mr-2"
-                            />
+                        const participantCount = getParticipantCount(
+                          day,
+                          memberId
+                        );
+                        const paymentAmount = calculatePaymentAmount(
+                          day,
+                          memberId
+                        );
 
-                            <div className="flex flex-col">
-                              <span className="text-sm">{memberData.name}</span>
-                              {participantCount > 1 && (
-                                <span className="text-xs text-muted-foreground">
-                                  {participantCount} người
-                                </span>
+                        return (
+                          <div
+                            key={memberId}
+                            className="flex items-center justify-between p-2 rounded-lg bg-badminton bg-opacity-10"
+                          >
+                            <div className="flex items-center">
+                              <ClickableAvatar
+                                name={memberData.name || ""}
+                                imageUrl={memberData.avatarUrl}
+                                size="sm"
+                                className="mr-2"
+                              />
+
+                              <div className="flex flex-col">
+                                <span className="text-sm">{memberData.name}</span>
+                                {participantCount > 1 && (
+                                  <span className="text-xs text-muted-foreground">
+                                    {participantCount} người
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex items-center space-x-1">
+                              {memberHasPaid && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge
+                                        variant="outline"
+                                        className="bg-green-100 text-green-800 border-green-500"
+                                      >
+                                        <Check className="h-3 w-3 mr-1" />
+                                        Đã TT
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>
+                                        Đã thanh toán{" "}
+                                        {formatCurrency(paymentAmount)}
+                                      </p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
+                              {memberData.isCore && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge className="bg-badminton text-white text-[10px]">
+                                        CỨNG
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Thành viên cứng</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center space-x-1">
-                            {memberHasPaid && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge
-                                      variant="outline"
-                                      className="bg-green-100 text-green-800 border-green-500"
-                                    >
-                                      <Check className="h-3 w-3 mr-1" />
-                                      Đã TT
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>
-                                      Đã thanh toán{" "}
-                                      {formatCurrency(paymentAmount)}
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            {memberData.isCore && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge className="bg-badminton text-white text-[10px]">
-                                      CỨNG
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Thành viên cứng</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
+                        );
+                      })
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">
+                        Chưa có người tham gia
+                      </p>
+                    )}
+                  </div>
+
+                  <ExtraExpenseForm
+                    day={day}
+                    onUpdateDay={(updatedDay) => handleUpdateDay(updatedDay)}
+                  />
+
+                  {user && (
+                    <div className="mt-4 space-y-2">
+                      {isParticipating ? (
+                        <div className="flex flex-col gap-2">
+                          <div className="text-sm text-center mb-1">
+                            <span className="font-medium">Số tiền cần trả: </span>
+                            <span
+                              className={`font-semibold ${
+                                calculatePaymentAmount(day, user.id) < 0
+                                  ? "text-green-600"
+                                  : "text-badminton"
+                              }`}
+                            >
+                              {formatCurrency(
+                                calculatePaymentAmount(day, user.id)
+                              )}
+                            </span>
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({getParticipantCount(day, user.id)} người)
+                            </span>
                           </div>
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">
-                      Chưa có người tham gia
-                    </p>
-                  )}
-                </div>
 
-                <ExtraExpenseForm
-                  day={day}
-                  onUpdateDay={(updatedDay) => handleUpdateDay(updatedDay)}
-                />
-
-                {user && (
-                  <div className="mt-4 space-y-2">
-                    {isParticipating ? (
-                      <div className="flex flex-col gap-2">
-                        <div className="text-sm text-center mb-1">
-                          <span className="font-medium">Số tiền cần trả: </span>
-                          <span
-                            className={`font-semibold ${
-                              calculatePaymentAmount(day, user.id) < 0
-                                ? "text-green-600"
-                                : "text-badminton"
-                            }`}
-                          >
-                            {formatCurrency(
-                              calculatePaymentAmount(day, user.id)
-                            )}
-                          </span>
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({getParticipantCount(day, user.id)} người)
-                          </span>
-                        </div>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className={`w-full ${
-                            hasPaid
-                              ? "border-green-500 text-green-500 hover:bg-green-50"
-                              : "border-badminton text-badminton hover:bg-badminton/10"
-                          }`}
-                          onClick={() => handleTogglePaymentStatus(day.id)}
-                          disabled={loading}
-                        >
-                          {hasPaid ? (
-                            <>
-                              <Check className="h-4 w-4 mr-1" /> Đã thanh toán
-                            </>
-                          ) : (
-                            <>
-                              <CreditCard className="h-4 w-4 mr-1" /> Xác nhận
-                              thanh toán
-                            </>
-                          )}
-                        </Button>
-
-                        {(!isPast || isAdmin) && (
                           <Button
                             variant="outline"
                             size="sm"
-                            className="w-full border-red-500 text-red-500 hover:bg-red-50"
-                            onClick={() => handleToggleParticipation(dayIndex)}
-                            disabled={loading || isDisabled}
+                            className={`w-full ${
+                              hasPaid
+                                ? "border-green-500 text-green-500 hover:bg-green-50"
+                                : "border-badminton text-badminton hover:bg-badminton/10"
+                            }`}
+                            onClick={() => handleTogglePaymentStatus(day.id)}
+                            disabled={loading}
                           >
-                            <X className="h-4 w-4 mr-1" /> Hủy tham gia
-                            {isParticipating && getRemainingTime(day) && (
-                              <span className="ml-2 text-xs">
-                                (còn {getRemainingTime(day)})
-                              </span>
+                            {hasPaid ? (
+                              <>
+                                <Check className="h-4 w-4 mr-1" /> Đã thanh toán
+                              </>
+                            ) : (
+                              <>
+                                <CreditCard className="h-4 w-4 mr-1" /> Xác nhận
+                                thanh toán
+                              </>
                             )}
                           </Button>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {(!isPast || isAdmin) && (
-                          <>
-                            <div className="flex items-center justify-between mb-1">
-                              <label
-                                htmlFor={`participant-count-${dayIndex}`}
-                                className="text-sm"
-                              >
-                                Số người tham gia:
-                              </label>
-                              <input
-                                id={`participant-count-${dayIndex}`}
-                                type="number"
-                                min="1"
-                                max={day.maxMembers}
-                                defaultValue="1"
-                                className="w-16 h-8 px-2 border rounded-md text-sm"
-                                onChange={(e) => {
-                                  const count = parseInt(e.target.value) || 1;
-                                  if (count < 1) e.target.value = "1";
-                                  if (count > day.maxMembers)
-                                    e.target.value = day.maxMembers.toString();
-                                }}
-                              />
-                            </div>
 
+                          {(!isPast || isAdmin) && (
                             <Button
-                              className={`w-full ${
-                                day.isActive
-                                  ? "bg-badminton hover:bg-badminton/80"
-                                  : "bg-gray-400 hover:bg-gray-500"
-                              }`}
+                              variant="outline"
                               size="sm"
-                              onClick={() => {
-                                const input = document.getElementById(
-                                  `participant-count-${dayIndex}`
-                                ) as HTMLInputElement;
-                                const count = parseInt(input.value) || 1;
-                                handleToggleParticipation(dayIndex, count);
-                              }}
-                              disabled={
-                                loading ||
-                                isDisabled ||
-                                totalParticipants >= day.maxMembers
-                              }
+                              className="w-full border-red-500 text-red-500 hover:bg-red-50"
+                              onClick={() => handleToggleParticipation(dayIndex)}
+                              disabled={loading || isDisabled}
                             >
-                              <CalendarIcon className="h-4 w-4 mr-1" /> Tham gia
+                              <X className="h-4 w-4 mr-1" /> Hủy tham gia
+                              {isParticipating && getRemainingTime(day) && (
+                                <span className="ml-2 text-xs">
+                                  (còn {getRemainingTime(day)})
+                                </span>
+                              )}
                             </Button>
-                          </>
-                        )}
-                      </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {(!isPast || isAdmin) && (
+                            <>
+                              <div className="flex items-center justify-between mb-1">
+                                <label
+                                  htmlFor={`participant-count-${dayIndex}`}
+                                  className="text-sm"
+                                >
+                                  Số người tham gia:
+                                </label>
+                                <input
+                                  id={`participant-count-${dayIndex}`}
+                                  type="number"
+                                  min="1"
+                                  max={day.maxMembers}
+                                  defaultValue="1"
+                                  className="w-16 h-8 px-2 border rounded-md text-sm"
+                                  onChange={(e) => {
+                                    const count = parseInt(e.target.value) || 1;
+                                    if (count < 1) e.target.value = "1";
+                                    if (count > day.maxMembers)
+                                      e.target.value = day.maxMembers.toString();
+                                  }}
+                                />
+                              </div>
+
+                              <Button
+                                className={`w-full ${
+                                  day.isActive
+                                    ? "bg-badminton hover:bg-badminton/80"
+                                    : "bg-gray-400 hover:bg-gray-500"
+                                }`}
+                                size="sm"
+                                onClick={() => {
+                                  const input = document.getElementById(
+                                    `participant-count-${dayIndex}`
+                                  ) as HTMLInputElement;
+                                  const count = parseInt(input.value) || 1;
+                                  handleToggleParticipation(dayIndex, count);
+                                }}
+                                disabled={
+                                  loading ||
+                                  isDisabled ||
+                                  totalParticipants >= day.maxMembers
+                                }
+                              >
+                                <CalendarIcon className="h-4 w-4 mr-1" /> Tham gia
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex justify-center">
+                    {isAfterGameTimeWithBuffer(day.date, day.sessionTime) && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs border-badminton text-badminton hover:bg-badminton/10"
+                        onClick={() => handleOpenBill(day)}
+                      >
+                        <Receipt className="h-3.5 w-3.5 mr-1" />
+                        Xem hóa đơn
+                      </Button>
                     )}
                   </div>
-                )}
-
-                <div className="mt-3 flex justify-center">
-                  {isAfterGameTimeWithBuffer(day.date, day.sessionTime) && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs border-badminton text-badminton hover:bg-badminton/10"
-                      onClick={() => handleOpenBill(day)}
-                    >
-                      <Receipt className="h-3.5 w-3.5 mr-1" />
-                      Xem hóa đơn
-                    </Button>
-                  )}
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
         </div>
       )}
       {selectedDayForBill && (
