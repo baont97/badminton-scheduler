@@ -226,7 +226,7 @@ const BillModal: React.FC<BillModalProps> = ({
 
                 const participantCount = getParticipantCount(day, memberId);
                 const paymentAmount = calculatePaymentAmount(day, memberId);
-                const hasPaid = day.paidMembers.includes(memberId);
+                const hasPaid = day.paidMembers.includes(memberId) || memberData.isCore;
 
                 return (
                   <div
