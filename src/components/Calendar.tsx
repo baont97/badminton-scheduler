@@ -438,7 +438,10 @@ const Calendar: React.FC<CalendarProps> = ({
 
     setLoading(true);
     try {
-      const generatedDays = await generateBadmintonDays(currentYear, currentMonth);
+      const generatedDays = await generateBadmintonDays(
+        currentYear,
+        currentMonth
+      );
       if (generatedDays.length > 0) {
         toast.success("Đã tạo buổi tập thành công");
         refreshData();
@@ -458,7 +461,10 @@ const Calendar: React.FC<CalendarProps> = ({
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
         <h2 className="text-lg font-medium text-center flex gap-2 w-full sm:w-auto justify-center sm:justify-start">
           Lịch Đánh Cầu {getMonthName(currentMonth)}/{currentYear}
-          <button onClick={refreshData} className="hover:rotate-180 transition-transform duration-300">
+          <button
+            onClick={refreshData}
+            className="hover:rotate-180 transition-transform duration-300"
+          >
             <RefreshCw className="w-5 h-5" />
           </button>
         </h2>
@@ -469,7 +475,9 @@ const Calendar: React.FC<CalendarProps> = ({
               checked={hidePaidDays}
               onCheckedChange={setHidePaidDays}
             />
-            <Label htmlFor="hide-paid-days" className="text-sm">Ẩn ngày đã thanh toán</Label>
+            <Label htmlFor="hide-paid-days" className="text-sm">
+              Ẩn ngày đã thanh toán
+            </Label>
           </div>
           <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
             <Button
@@ -485,9 +493,9 @@ const Calendar: React.FC<CalendarProps> = ({
             >
               Tháng trước
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={handleNextMonth}
               className="flex-1 sm:flex-none text-sm"
             >
@@ -603,17 +611,23 @@ const Calendar: React.FC<CalendarProps> = ({
                   <div className="mb-2 sm:mb-3 bg-badminton/5 rounded-lg p-2 text-xs">
                     <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
                       <div className="flex justify-between sm:block">
-                        <span>Chi phí sân:</span>
-                        <span className="font-medium">{formatCurrency(day.sessionCost)}</span>
-                      </div>
-                      <div className="flex justify-between sm:block">
-                        <span>Chi phí phát sinh:</span>
-                        <span className="font-medium">{formatCurrency(totalExtraExpenses)}</span>
-                      </div>
-                      <div className="flex justify-between sm:block">
-                        <span>Chi phí/người:</span>
+                        <span>Sân: </span>
                         <span className="font-medium">
-                          {formatCurrency(calculatePaymentAmount(day, user?.id || ''))}
+                          {formatCurrency(day.sessionCost)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between sm:block">
+                        <span>Phát sinh: </span>
+                        <span className="font-medium">
+                          {formatCurrency(totalExtraExpenses)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between sm:block">
+                        <span>1 người: </span>
+                        <span className="font-medium">
+                          {formatCurrency(
+                            calculatePaymentAmount(day, user?.id || "")
+                          )}
                         </span>
                       </div>
                     </div>
@@ -624,7 +638,10 @@ const Calendar: React.FC<CalendarProps> = ({
                       const member = members.find((m) => m.id === memberId);
                       if (!member) return null;
 
-                      const participantCount = getParticipantCount(day, memberId);
+                      const participantCount = getParticipantCount(
+                        day,
+                        memberId
+                      );
                       const isPaid = day.paidMembers.includes(memberId);
 
                       return (

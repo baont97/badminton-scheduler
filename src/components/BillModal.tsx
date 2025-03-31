@@ -168,24 +168,24 @@ const BillModal: React.FC<BillModalProps> = ({
                 {totalParticipants} người
               </div>
 
-              <div>Chi phí sân:</div>
+              <div>Sân:</div>
               <div className="text-right font-medium">
                 {formatCurrency(totalSessionCost)}
               </div>
 
-              <div>Đơn giá / người:</div>
+              <div>1 người:</div>
               <div className="text-right font-medium">
                 {formatCurrency(costPerPerson)}
               </div>
 
               {totalExtraExpenses > 0 && (
                 <>
-                  <div>Chi phí phát sinh:</div>
+                  <div>Phát sinh:</div>
                   <div className="text-right font-medium">
                     {formatCurrency(totalExtraExpenses)}
                   </div>
 
-                  <div>Chi phí phát sinh / người:</div>
+                  <div>Phát sinh / người:</div>
                   <div className="text-right font-medium">
                     {formatCurrency(extraExpensesPerPerson)}
                   </div>
@@ -197,7 +197,7 @@ const BillModal: React.FC<BillModalProps> = ({
           {day.extraExpenses && day.extraExpenses.length > 0 && (
             <div className="mb-4">
               <h3 className="font-medium border-b pb-1 mb-2">
-                Chi tiết chi phí phát sinh:
+                Chi tiết phát sinh:
               </h3>
               <div className="text-sm space-y-1">
                 {day.extraExpenses.map((expense, index) => (
