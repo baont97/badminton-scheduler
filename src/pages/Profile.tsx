@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import PinSetup from "@/components/PinSetup";
 
 const Profile = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -40,51 +41,58 @@ const Profile = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Hồ sơ của tôi</h1>
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-2xl mx-auto space-y-8">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-bold mb-6">Thông tin cá nhân</h2>
+          <form onSubmit={handleUpdateProfile} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Email
+              </label>
+              <Input
+                type="email"
+                value={user?.email || ""}
+                disabled
+                className="mt-1"
+              />
+            </div>
 
-        <form onSubmit={handleUpdateProfile} className="space-y-6">
-          <div>
-            <label
-              htmlFor="userName"
-              className="block text-sm font-medium mb-1"
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                Tên người dùng
+              </label>
+              <Input
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700">
+                URL hình đại diện
+              </label>
+              <Input
+                type="text"
+                value={avatarUrl}
+                onChange={(e) => setAvatarUrl(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-badminton hover:bg-badminton/80"
+              disabled={loading}
             >
-              Tên người dùng
-            </label>
-            <Input
-              id="userName"
-              type="text"
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              placeholder="Nhập tên người dùng của bạn"
-            />
-          </div>
+              {loading ? "Đang cập nhật..." : "Cập nhật thông tin"}
+            </Button>
+          </form>
+        </div>
 
-          <div>
-            <label
-              htmlFor="avatarUrl"
-              className="block text-sm font-medium mb-1"
-            >
-              URL hình đại diện
-            </label>
-            <Input
-              id="avatarUrl"
-              type="text"
-              value={avatarUrl}
-              onChange={(e) => setAvatarUrl(e.target.value)}
-              placeholder="Nhập URL hình đại diện của bạn"
-            />
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full bg-badminton hover:bg-badminton/80"
-            disabled={loading}
-          >
-            {loading ? "Đang cập nhật..." : "Cập nhật thông tin"}
-          </Button>
-        </form>
+        <PinSetup />
       </div>
     </div>
   );
