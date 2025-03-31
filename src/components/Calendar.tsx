@@ -11,7 +11,12 @@ import {
   getTotalExtraExpenses,
 } from "@/utils/schedulerUtils";
 import { toast } from "sonner";
-import { toggleParticipation, markPaymentStatus } from "@/utils/apiUtils";
+import {
+  toggleParticipation,
+  markPaymentStatus,
+  deleteBadmintonDay,
+  generateBadmintonDays,
+} from "@/utils/apiUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +25,7 @@ import {
   Calendar as CalendarIcon,
   CreditCard,
   RefreshCw,
+  Ban,
 } from "lucide-react";
 import {
   Tooltip,
@@ -386,11 +392,65 @@ const Calendar: React.FC<CalendarProps> = ({
   const isAllMembersPaid = (day: CalendarDay): boolean => {
     if (day.members.length === 0) return false;
     if (!isPastDay(day.date)) return false;
-    
+
     return day.members.every((memberId) => {
       const memberData = members.find((m) => m.id === memberId);
       return day.paidMembers.includes(memberId) || memberData?.isCore;
     });
+  };
+
+  const handleToggleDayStatus = async (dayId: string) => {
+    if (!isAdmin) {
+      toast.error("Bạn không có quyền hủy buổi tập");
+      return;
+    }
+
+    setLoading(true);
+    const dayIndex = days.findIndex((d) => d.id === dayId);
+    if (dayIndex === -1) return;
+
+    const day = days[dayIndex];
+
+    try {
+      const success = await deleteBadmintonDay(dayId);
+      if (!success) throw new Error("Failed to update day status");
+
+      const updatedDays = [...days];
+      updatedDays[dayIndex] = {
+        ...day,
+        isActive: false,
+      };
+      onUpdateDays(updatedDays);
+      toast.success("Đã hủy buổi tập thành công");
+    } catch (error) {
+      console.error("Error updating day status:", error);
+      toast.error("Có lỗi xảy ra khi hủy buổi tập");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateDays = async () => {
+    if (!isAdmin) {
+      toast.error("Bạn không có quyền tạo buổi tập");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const generatedDays = await generateBadmintonDays(currentYear, currentMonth);
+      if (generatedDays.length > 0) {
+        toast.success("Đã tạo buổi tập thành công");
+        refreshData();
+      } else {
+        toast.error("Không thể tạo buổi tập");
+      }
+    } catch (error) {
+      console.error("Error generating days:", error);
+      toast.error("Có lỗi xảy ra khi tạo buổi tập");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -432,13 +492,24 @@ const Calendar: React.FC<CalendarProps> = ({
       </div>
 
       {days.length === 0 ? (
-        <div className="p-8 text-center text-muted-foreground border border-dashed rounded-lg">
-          <p>Không có lịch đánh cầu nào trong tháng này</p>
+        <div className="flex flex-col items-center justify-center py-12">
+          <CalendarIcon className="h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-gray-500 text-center mb-4">
+            Chưa có buổi tập nào trong tháng này
+          </p>
           {isAdmin && (
-            <p className="mt-2 text-sm">
-              Bạn có thể thiết lập lịch đánh cầu trong phần Cài đặt ở trang
-              Admin
-            </p>
+            <Button
+              onClick={handleGenerateDays}
+              disabled={loading}
+              className="bg-badminton hover:bg-badminton/90"
+            >
+              {loading ? (
+                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CalendarIcon className="h-4 w-4 mr-2" />
+              )}
+              Tạo buổi tập
+            </Button>
           )}
         </div>
       ) : (
@@ -464,21 +535,42 @@ const Calendar: React.FC<CalendarProps> = ({
               return (
                 <div
                   key={dayIndex}
-                  className={`calendar-day p-4 ${
-                    day.isActive ? "calendar-day-active" : "bg-gray-200"
+                  className={`calendar-day p-4 relative ${
+                    day.isActive ? "calendar-day-active" : "bg-gray-100"
                   } 
                     ${isDisabled ? "opacity-70 cursor-not-allowed" : ""}`}
                 >
+                  {!day.isActive && (
+                    <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center z-10">
+                      <span className="text-white font-semibold text-lg">
+                        Đã hủy
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center mb-3">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        day.isActive
-                          ? "bg-badminton text-white"
-                          : "bg-gray-400 text-white"
-                      }`}
-                    >
-                      {getDayName(day.dayOfWeek)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          day.isActive
+                            ? "bg-badminton text-white"
+                            : "bg-gray-400 text-white"
+                        }`}
+                      >
+                        {getDayName(day.dayOfWeek)}
+                      </span>
+                      {isAdmin && day.isActive && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => handleToggleDayStatus(day.id)}
+                          disabled={loading}
+                        >
+                          <Ban className="h-3 w-3 mr-1" />
+                          Hủy
+                        </Button>
+                      )}
+                    </div>
                     <span className="text-sm font-semibold">
                       {formatDate(day.date)}
                     </span>
@@ -494,7 +586,9 @@ const Calendar: React.FC<CalendarProps> = ({
                           day.isActive ? "bg-badminton" : "bg-gray-400"
                         }`}
                         style={{
-                          width: `${(totalParticipants / day.maxMembers) * 100}%`,
+                          width: `${
+                            (totalParticipants / day.maxMembers) * 100
+                          }%`,
                         }}
                       ></div>
                     </div>
@@ -540,10 +634,13 @@ const Calendar: React.FC<CalendarProps> = ({
                     <h3 className="text-sm font-medium">Người tham gia:</h3>
                     {day.members.length > 0 ? (
                       day.members.map((memberId) => {
-                        const memberData = members.find((m) => m.id === memberId);
+                        const memberData = members.find(
+                          (m) => m.id === memberId
+                        );
                         if (!memberData) return null;
                         const memberHasPaid =
-                          day.paidMembers.includes(memberId) || memberData.isCore;
+                          day.paidMembers.includes(memberId) ||
+                          memberData.isCore;
 
                         const participantCount = getParticipantCount(
                           day,
@@ -568,7 +665,9 @@ const Calendar: React.FC<CalendarProps> = ({
                               />
 
                               <div className="flex flex-col">
-                                <span className="text-sm">{memberData.name}</span>
+                                <span className="text-sm">
+                                  {memberData.name}
+                                </span>
                                 {participantCount > 1 && (
                                   <span className="text-xs text-muted-foreground">
                                     {participantCount} người
@@ -633,7 +732,9 @@ const Calendar: React.FC<CalendarProps> = ({
                       {isParticipating ? (
                         <div className="flex flex-col gap-2">
                           <div className="text-sm text-center mb-1">
-                            <span className="font-medium">Số tiền cần trả: </span>
+                            <span className="font-medium">
+                              Số tiền cần trả:{" "}
+                            </span>
                             <span
                               className={`font-semibold ${
                                 calculatePaymentAmount(day, user.id) < 0
@@ -678,7 +779,9 @@ const Calendar: React.FC<CalendarProps> = ({
                               variant="outline"
                               size="sm"
                               className="w-full border-red-500 text-red-500 hover:bg-red-50"
-                              onClick={() => handleToggleParticipation(dayIndex)}
+                              onClick={() =>
+                                handleToggleParticipation(dayIndex)
+                              }
                               disabled={loading || isDisabled}
                             >
                               <X className="h-4 w-4 mr-1" /> Hủy tham gia
@@ -712,7 +815,8 @@ const Calendar: React.FC<CalendarProps> = ({
                                     const count = parseInt(e.target.value) || 1;
                                     if (count < 1) e.target.value = "1";
                                     if (count > day.maxMembers)
-                                      e.target.value = day.maxMembers.toString();
+                                      e.target.value =
+                                        day.maxMembers.toString();
                                   }}
                                 />
                               </div>
@@ -737,7 +841,8 @@ const Calendar: React.FC<CalendarProps> = ({
                                   totalParticipants >= day.maxMembers
                                 }
                               >
-                                <CalendarIcon className="h-4 w-4 mr-1" /> Tham gia
+                                <CalendarIcon className="h-4 w-4 mr-1" /> Tham
+                                gia
                               </Button>
                             </>
                           )}

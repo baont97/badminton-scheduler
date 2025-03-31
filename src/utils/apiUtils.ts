@@ -217,6 +217,21 @@ export async function updateBadmintonSettings(settings: {
 // Generate badminton days for a specific month
 export async function generateBadmintonDays(year: number, month: number) {
   try {
+    // First, fetch existing days to preserve their status
+    const { data: existingDays, error: fetchError } = await supabase
+      .from("badminton_days")
+      .select("*")
+      .gte("date", `${year}-${month.toString().padStart(2, "0")}-01`)
+      .lt("date", `${year}-${(month + 1).toString().padStart(2, "0")}-01`);
+
+    if (fetchError) throw fetchError;
+
+    // Create a map of existing days by date
+    const existingDaysMap = new Map(
+      existingDays?.map(day => [day.date, day]) || []
+    );
+
+    // Generate new days
     const { data, error } = await supabase.rpc("generate_badminton_days", {
       _year: year,
       _month: month,
@@ -224,7 +239,26 @@ export async function generateBadmintonDays(year: number, month: number) {
 
     if (error) throw error;
 
-    return data;
+    // For each generated day, preserve the is_active status if it exists
+    const updatedDays = data.map((day: any) => {
+      const existingDay = existingDaysMap.get(day.date);
+      if (existingDay) {
+        return {
+          ...day,
+          is_active: existingDay.is_active
+        };
+      }
+      return day;
+    });
+
+    // Update the days with preserved status
+    const { error: updateError } = await supabase
+      .from("badminton_days")
+      .upsert(updatedDays, { onConflict: 'date' });
+
+    if (updateError) throw updateError;
+
+    return updatedDays;
   } catch (error) {
     console.error("Error generating badminton days:", error);
     return [];
@@ -361,10 +395,7 @@ export async function fetchBadmintonDays(
   month: number
 ): Promise<CalendarDay[]> {
   try {
-    // First, ensure days are generated for this month
-    await generateBadmintonDays(year, month);
-
-    // Then fetch the days
+    // Fetch the days
     const { data, error } = await supabase
       .from("badminton_days")
       .select("*")
@@ -372,6 +403,11 @@ export async function fetchBadmintonDays(
       .lt("date", `${year}-${(month + 1).toString().padStart(2, "0")}-01`);
 
     if (error) throw error;
+
+    // If no days exist, return empty array
+    if (!data || data.length === 0) {
+      return [];
+    }
 
     // Fetch all opt-outs for this month's days
     const dayIds = data.map((day) => day.id);
@@ -518,5 +554,21 @@ export async function blockUser(
       success: false,
       message: `Đã xảy ra lỗi khi ${isBlocked ? "mở khóa" : "khóa"} người dùng`,
     };
+  }
+}
+
+// Soft delete a badminton day
+export async function deleteBadmintonDay(dayId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("badminton_days")
+      .update({ is_active: false })
+      .eq("id", dayId);
+
+    if (error) throw error;
+    return true;
+  } catch (error) {
+    console.error("Error soft deleting badminton day:", error);
+    return false;
   }
 }
