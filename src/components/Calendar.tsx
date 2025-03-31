@@ -454,24 +454,24 @@ const Calendar: React.FC<CalendarProps> = ({
   };
 
   return (
-    <div className="glass-card p-6 animate-fade-in">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-medium text-center flex gap-2">
+    <div className="glass-card p-2 sm:p-6 animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+        <h2 className="text-lg font-medium text-center flex gap-2 w-full sm:w-auto justify-center sm:justify-start">
           Lịch Đánh Cầu {getMonthName(currentMonth)}/{currentYear}
-          <button onClick={refreshData}>
-            <RefreshCw />
+          <button onClick={refreshData} className="hover:rotate-180 transition-transform duration-300">
+            <RefreshCw className="w-5 h-5" />
           </button>
         </h2>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center space-x-2">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+          <div className="flex items-center space-x-2 w-full sm:w-auto justify-center">
             <Switch
               id="hide-paid-days"
               checked={hidePaidDays}
               onCheckedChange={setHidePaidDays}
             />
-            <Label htmlFor="hide-paid-days">Ẩn ngày đã thanh toán</Label>
+            <Label htmlFor="hide-paid-days" className="text-sm">Ẩn ngày đã thanh toán</Label>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-center">
             <Button
               variant="outline"
               size="sm"
@@ -481,10 +481,16 @@ const Calendar: React.FC<CalendarProps> = ({
                 new Date().getMonth() + 1 === currentMonth &&
                 new Date().getFullYear() === currentYear
               }
+              className="flex-1 sm:flex-none text-sm"
             >
               Tháng trước
             </Button>
-            <Button variant="outline" size="sm" onClick={handleNextMonth}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleNextMonth}
+              className="flex-1 sm:flex-none text-sm"
+            >
               Tháng sau
             </Button>
           </div>
@@ -492,16 +498,16 @@ const Calendar: React.FC<CalendarProps> = ({
       </div>
 
       {days.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <CalendarIcon className="h-12 w-12 text-gray-400 mb-4" />
-          <p className="text-gray-500 text-center mb-4">
+        <div className="flex flex-col items-center justify-center py-8 sm:py-12">
+          <CalendarIcon className="h-10 w-10 sm:h-12 sm:w-12 text-gray-400 mb-4" />
+          <p className="text-gray-500 text-center mb-4 text-sm sm:text-base">
             Chưa có buổi tập nào trong tháng này
           </p>
           {isAdmin && (
             <Button
               onClick={handleGenerateDays}
               disabled={loading}
-              className="bg-badminton hover:bg-badminton/90"
+              className="bg-badminton hover:bg-badminton/90 text-sm"
             >
               {loading ? (
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -513,7 +519,7 @@ const Calendar: React.FC<CalendarProps> = ({
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:gap-6 md:grid-cols-2">
           {days
             .filter((day) => {
               const allPaid = isAllMembersPaid(day);
@@ -535,7 +541,7 @@ const Calendar: React.FC<CalendarProps> = ({
               return (
                 <div
                   key={dayIndex}
-                  className={`calendar-day p-4 relative ${
+                  className={`calendar-day p-3 sm:p-4 relative ${
                     day.isActive ? "calendar-day-active" : "bg-gray-100"
                   } 
                     ${isDisabled ? "opacity-70 cursor-not-allowed" : ""}`}
@@ -547,10 +553,10 @@ const Calendar: React.FC<CalendarProps> = ({
                       </span>
                     </div>
                   )}
-                  <div className="flex justify-between items-center mb-3">
-                    <div className="flex items-center gap-2">
+                  <div className="flex justify-between items-center mb-2 sm:mb-3">
+                    <div className="flex items-center gap-1 sm:gap-2">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                           day.isActive
                             ? "bg-badminton text-white"
                             : "bg-gray-400 text-white"
@@ -562,7 +568,7 @@ const Calendar: React.FC<CalendarProps> = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
+                          className="h-6 px-1.5 sm:px-2 text-red-500 hover:text-red-600 hover:bg-red-50 text-xs sm:text-sm"
                           onClick={() => handleToggleDayStatus(day.id)}
                           disabled={loading}
                         >
@@ -571,7 +577,7 @@ const Calendar: React.FC<CalendarProps> = ({
                         </Button>
                       )}
                     </div>
-                    <span className="text-sm font-semibold">
+                    <span className="text-xs sm:text-sm font-semibold">
                       {formatDate(day.date)}
                     </span>
                   </div>
@@ -594,132 +600,67 @@ const Calendar: React.FC<CalendarProps> = ({
                     </div>
                   </div>
 
-                  <div className="mb-3 bg-badminton/5 rounded-lg p-2 text-xs">
-                    <div className="flex justify-between">
-                      <span>Chi phí sân:</span>
-                      <span className="font-medium">
-                        {formatCurrency(day.sessionCost || 260000)}
-                      </span>
-                    </div>
-
-                    {day.sessionTime && (
-                      <div className="flex justify-between mt-1">
-                        <span>Thời gian:</span>
-                        <span className="font-medium">{day.sessionTime}</span>
+                  <div className="mb-2 sm:mb-3 bg-badminton/5 rounded-lg p-2 text-xs">
+                    <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
+                      <div className="flex justify-between sm:block">
+                        <span>Chi phí sân:</span>
+                        <span className="font-medium">{formatCurrency(day.sessionCost)}</span>
                       </div>
-                    )}
-
-                    {totalExtraExpenses > 0 && (
-                      <>
-                        <div className="flex justify-between mt-1">
-                          <span>Chi phí phát sinh:</span>
-                          <span className="font-medium">
-                            {formatCurrency(totalExtraExpenses)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between mt-1">
-                          <span>Chi phí / người:</span>
-                          <span className="font-medium">
-                            {formatCurrency(
-                              (day.sessionCost || 260000) / totalParticipants +
-                                extraExpensesPerPerson
-                            )}
-                          </span>
-                        </div>
-                      </>
-                    )}
+                      <div className="flex justify-between sm:block">
+                        <span>Chi phí phát sinh:</span>
+                        <span className="font-medium">{formatCurrency(totalExtraExpenses)}</span>
+                      </div>
+                      <div className="flex justify-between sm:block">
+                        <span>Chi phí/người:</span>
+                        <span className="font-medium">
+                          {formatCurrency(calculatePaymentAmount(day, user?.id || ''))}
+                        </span>
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <h3 className="text-sm font-medium">Người tham gia:</h3>
-                    {day.members.length > 0 ? (
-                      day.members.map((memberId) => {
-                        const memberData = members.find(
-                          (m) => m.id === memberId
-                        );
-                        if (!memberData) return null;
-                        const memberHasPaid =
-                          day.paidMembers.includes(memberId) ||
-                          memberData.isCore;
+                  <div className="flex flex-wrap gap-1.5">
+                    {day.members.map((memberId) => {
+                      const member = members.find((m) => m.id === memberId);
+                      if (!member) return null;
 
-                        const participantCount = getParticipantCount(
-                          day,
-                          memberId
-                        );
-                        const paymentAmount = calculatePaymentAmount(
-                          day,
-                          memberId
-                        );
+                      const participantCount = getParticipantCount(day, memberId);
+                      const isPaid = day.paidMembers.includes(memberId);
 
-                        return (
-                          <div
-                            key={memberId}
-                            className="flex items-center justify-between p-2 rounded-lg bg-badminton bg-opacity-10"
-                          >
-                            <div className="flex items-center">
-                              <ClickableAvatar
-                                name={memberData.name || ""}
-                                imageUrl={memberData.avatarUrl}
-                                size="sm"
-                                className="mr-2"
-                              />
-
-                              <div className="flex flex-col">
-                                <span className="text-sm">
-                                  {memberData.name}
-                                </span>
+                      return (
+                        <TooltipProvider key={memberId}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="relative">
+                                <ClickableAvatar
+                                  name={member.name}
+                                  imageUrl={member.avatarUrl}
+                                  size="sm"
+                                  className={isPaid ? "opacity-50" : ""}
+                                />
                                 {participantCount > 1 && (
-                                  <span className="text-xs text-muted-foreground">
-                                    {participantCount} người
-                                  </span>
+                                  <Badge
+                                    className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+                                    variant="default"
+                                  >
+                                    {participantCount}
+                                  </Badge>
                                 )}
                               </div>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              {memberHasPaid && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge
-                                        variant="outline"
-                                        className="bg-green-100 text-green-800 border-green-500"
-                                      >
-                                        <Check className="h-3 w-3 mr-1" />
-                                        Đã TT
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>
-                                        Đã thanh toán{" "}
-                                        {formatCurrency(paymentAmount)}
-                                      </p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                              {memberData.isCore && (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <Badge className="bg-badminton text-white text-[10px]">
-                                        CỨNG
-                                      </Badge>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p>Thành viên cứng</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">
-                        Chưa có người tham gia
-                      </p>
-                    )}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">
+                                {member.name}
+                                {participantCount > 1
+                                  ? ` (${participantCount} người)`
+                                  : ""}
+                                {isPaid ? " - Đã thanh toán" : ""}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })}
                   </div>
 
                   <ExtraExpenseForm

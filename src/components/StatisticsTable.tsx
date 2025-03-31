@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   CalendarDay,
@@ -33,10 +32,77 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
   };
 
   return (
-    <div className="glass-card p-6 animate-slide-up">
-      <h2 className="text-lg font-medium mb-6 text-center">Thống kê chi phí</h2>
+    <div className="glass-card p-3 sm:p-6 animate-slide-up">
+      <h2 className="text-lg font-medium mb-4 sm:mb-6 text-center">Thống kê chi phí</h2>
 
-      <div className="overflow-x-auto">
+      {/* Mobile view */}
+      <div className="block sm:hidden space-y-4">
+        {members.map((member) => {
+          const { totalDays, totalCost } = calculateCostPerPerson(days, member.id);
+          const expensesContribution = calculateMemberExpensesContribution(member.id);
+          
+          return (
+            <div
+              key={member.id}
+              className="border rounded-lg p-3 space-y-3 hover:bg-muted/20 transition-colors"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <ClickableAvatar
+                    name={member.name}
+                    imageUrl={member.avatarUrl}
+                    size="md"
+                    className="mr-2"
+                  />
+                  <div>
+                    <span className="font-medium">{member.name}</span>
+                    <div className="mt-1">
+                      {member.isCore ? (
+                        <Badge className="bg-badminton text-white border-none text-xs">
+                          CỨNG
+                        </Badge>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          Thành viên
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm text-muted-foreground">Tổng chi phí</div>
+                  <span className={`font-medium ${totalCost < 0 ? 'text-green-600' : ''}`}>
+                    {formatCurrency(totalCost)}
+                  </span>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <div className="text-muted-foreground">Số buổi tham gia</div>
+                  <div className="font-medium">{totalDays} buổi</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-muted-foreground">Chi phí phát sinh</div>
+                  {expensesContribution > 0 ? (
+                    <div className="flex items-center justify-end">
+                      <Coins className="h-3.5 w-3.5 mr-1 text-amber-500" />
+                      <span className="font-medium text-amber-600">
+                        {formatCurrency(expensesContribution)}
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">-</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop view */}
+      <div className="hidden sm:block overflow-x-auto">
         <table className="w-full">
           <thead>
             <tr className="border-b border-border">
@@ -49,10 +115,7 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
           </thead>
           <tbody>
             {members.map((member) => {
-              const { totalDays, totalCost } = calculateCostPerPerson(
-                days,
-                member.id
-              );
+              const { totalDays, totalCost } = calculateCostPerPerson(days, member.id);
               const expensesContribution = calculateMemberExpensesContribution(member.id);
               
               return (
@@ -109,7 +172,7 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
         </table>
       </div>
 
-      <div className="mt-6 p-4 bg-badminton-light rounded-lg border border-badminton/20">
+      <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-badminton-light rounded-lg border border-badminton/20">
         <p className="text-sm text-center text-badminton-dark">
           Chi phí mỗi buổi:{" "}
           <span className="font-bold">{formatCurrency(260000)}</span> chia đều
@@ -122,7 +185,7 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
         )}
       </div>
       
-      <div className="mt-4 text-xs text-muted-foreground">
+      <div className="mt-3 sm:mt-4 text-xs text-muted-foreground">
         <p className="text-center">
           Người nhập chi phí phát sinh sẽ được trừ vào phần chi phí phải trả.
           Nếu chi phí hiện số âm, người đó sẽ được nhận lại số tiền dư.
