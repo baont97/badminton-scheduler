@@ -1,3 +1,4 @@
+
 import { ExtraExpense } from "./apiUtils";
 
 export interface Member {
@@ -88,19 +89,32 @@ export const calculateCostPerPerson = (
   return { totalDays, totalCost };
 };
 
-export const isAllMembersPaid = (day: CalendarDay): boolean => {
+// Helper function to check if a date is in the past
+export const isPastDay = (date: string): boolean => {
+  const now = new Date();
+  const dayDate = new Date(date);
+
+  now.setHours(0, 0, 0, 0);
+  dayDate.setHours(0, 0, 0, 0);
+
+  return dayDate < now;
+};
+
+export const isAllMembersPaid = (day: CalendarDay, allMembers: Member[]): boolean => {
   if (day.members.length === 0) return false;
   if (!isPastDay(day.date)) return false;
 
   return day.members.every((memberId) => {
-    const memberData = members.find((m) => m.id === memberId);
+    const memberData = allMembers.find((m) => m.id === memberId);
     return day.paidMembers.includes(memberId) || memberData?.isCore;
   });
 };
 
-export const calculatePaymentAmount = (day: CalendarDay, memberId: string): number => {
-  const memberData = members.find((m) => m.id === memberId);
-  if (memberData?.isCore) return 0;
+export const calculatePaymentAmount = (day: CalendarDay, memberId: string, allMembers?: Member[]): number => {
+  if (allMembers) {
+    const memberData = allMembers.find((m) => m.id === memberId);
+    if (memberData?.isCore) return 0;
+  }
   
   const totalParticipants = getTotalParticipantsInDay(day);
   if (totalParticipants === 0) return 0;
@@ -117,4 +131,3 @@ export const calculatePaymentAmount = (day: CalendarDay, memberId: string): numb
   
   return totalCost - expensesCredit;
 };
-

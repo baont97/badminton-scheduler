@@ -835,7 +835,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                   : "border-badminton text-badminton hover:bg-badminton/10"
                               }`}
                               onClick={() => handleTogglePaymentStatus(day.id)}
-                              disabled={loading || user?.isCore}
+                              disabled={loading || (members.find(m => m.id === user.id)?.isCore)}
                             >
                               {hasPaid ? (
                                 <Check className="h-4 w-4" />
