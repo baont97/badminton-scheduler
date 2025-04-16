@@ -218,58 +218,71 @@ const Calendar: React.FC<CalendarProps> = ({
 
     setLoading(true);
 
-    const success = await toggleParticipation(
-      day.id,
-      targetUserId,
-      isMemberInDay,
-      participantCount
-    );
+    try {
+      console.log("Calling toggleParticipation with:", {
+        dayId: day.id,
+        userId: targetUserId,
+        isParticipating: isMemberInDay,
+        slot: participantCount
+      });
+      
+      const success = await toggleParticipation(
+        day.id,
+        targetUserId,
+        isMemberInDay,
+        participantCount
+      );
 
-    if (success) {
-      const updatedDays = [...days];
-      const actualDayIndex = days.findIndex((d) => d.id === day.id);
+      if (success) {
+        const updatedDays = [...days];
+        const actualDayIndex = days.findIndex((d) => d.id === day.id);
 
-      if (isMemberInDay) {
-        const removedCoreMembers = isUserCoreMember
-          ? [...(day._removedCoreMembers || []), targetUserId]
-          : day._removedCoreMembers;
+        if (isMemberInDay) {
+          const removedCoreMembers = isUserCoreMember
+            ? [...(day._removedCoreMembers || []), targetUserId]
+            : day._removedCoreMembers;
 
-        updatedDays[actualDayIndex] = {
-          ...days[actualDayIndex],
-          members: days[actualDayIndex].members.filter(
-            (id) => id !== targetUserId
-          ),
-          paidMembers: days[actualDayIndex].paidMembers.filter(
-            (id) => id !== targetUserId
-          ),
-          slots: days[actualDayIndex].slots.filter((s) => s[0] !== targetUserId),
-          _removedCoreMembers: removedCoreMembers,
-        };
-      } else {
-        let removedCoreMembers = day._removedCoreMembers;
-        if (isUserCoreMember && removedCoreMembers?.includes(targetUserId)) {
-          removedCoreMembers = removedCoreMembers.filter(
-            (id) => id !== targetUserId
-          );
+          updatedDays[actualDayIndex] = {
+            ...days[actualDayIndex],
+            members: days[actualDayIndex].members.filter(
+              (id) => id !== targetUserId
+            ),
+            paidMembers: days[actualDayIndex].paidMembers.filter(
+              (id) => id !== targetUserId
+            ),
+            slots: days[actualDayIndex].slots.filter((s) => s[0] !== targetUserId),
+            _removedCoreMembers: removedCoreMembers,
+          };
+        } else {
+          let removedCoreMembers = day._removedCoreMembers;
+          if (isUserCoreMember && removedCoreMembers?.includes(targetUserId)) {
+            removedCoreMembers = removedCoreMembers.filter(
+              (id) => id !== targetUserId
+            );
+          }
+
+          updatedDays[actualDayIndex] = {
+            ...days[actualDayIndex],
+            members: [...days[actualDayIndex].members, targetUserId],
+            slots: [...days[actualDayIndex].slots, [targetUserId, participantCount]],
+            _removedCoreMembers: removedCoreMembers,
+          };
         }
 
-        updatedDays[actualDayIndex] = {
-          ...days[actualDayIndex],
-          members: [...days[actualDayIndex].members, targetUserId],
-          slots: [...days[actualDayIndex].slots, [targetUserId, participantCount]],
-          _removedCoreMembers: removedCoreMembers,
-        };
+        onUpdateDays(updatedDays);
+        toast.success(
+          isMemberInDay ? "Đã hủy tham gia thành công" : "Đã tham gia thành công"
+        );
+      } else {
+        console.error("Failed to toggle participation");
+        toast.error("Có lỗi xảy ra khi cập nhật trạng thái tham gia");
       }
-
-      onUpdateDays(updatedDays);
-      toast.success(
-        isMemberInDay ? "Đã hủy tham gia thành công" : "Đã tham gia thành công"
-      );
-    } else {
+    } catch (error) {
+      console.error("Error toggling participation:", error);
       toast.error("Có lỗi xảy ra khi cập nhật trạng thái tham gia");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleTogglePaymentStatus = async (dayId: string) => {

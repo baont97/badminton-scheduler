@@ -110,6 +110,8 @@ export async function toggleParticipation(
   slot: number
 ): Promise<boolean> {
   try {
+    console.log("toggleParticipation called with:", { dayId, userId, isParticipating, slot });
+    
     if (isParticipating) {
       // Remove participation
       const { error } = await supabase
@@ -118,20 +120,32 @@ export async function toggleParticipation(
         .eq("day_id", dayId)
         .eq("user_id", userId);
 
+      if (error) {
+        console.error("Error removing participation:", error);
+        return false;
+      }
+
       // Add to opt-out list
       await supabase
         .from("core_member_opt_outs")
         .upsert({ day_id: dayId, user_id: userId });
 
-      return !error;
+      return true;
     } else {
       // Add participation
+      console.log("Adding participation:", { day_id: dayId, user_id: userId, has_paid: false, slot });
+      
       const { error } = await supabase.from("badminton_participants").insert({
         day_id: dayId,
         user_id: userId,
         has_paid: false,
         slot,
       });
+
+      if (error) {
+        console.error("Error adding participation:", error);
+        return false;
+      }
 
       // Remove from opt-out list
       await supabase
@@ -140,7 +154,7 @@ export async function toggleParticipation(
         .eq("day_id", dayId)
         .eq("user_id", userId);
 
-      return !error;
+      return true;
     }
   } catch (error) {
     console.error("Error toggling participation:", error);
