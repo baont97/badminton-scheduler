@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Calendar from "@/components/Calendar";
+import Calendar from "@/components/calendar";
 import MemberList from "@/components/MemberList";
 import StatisticsTable from "@/components/StatisticsTable";
 import { Member, CalendarDay } from "@/utils/schedulerUtils";

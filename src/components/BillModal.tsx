@@ -28,7 +28,7 @@ interface BillModalProps {
   members: Member[];
 }
 
-const BillModal: React.FC<BillModalProps> = ({
+export const BillModal: React.FC<BillModalProps> = ({
   isOpen,
   onClose,
   day,
@@ -226,7 +226,8 @@ const BillModal: React.FC<BillModalProps> = ({
 
                 const participantCount = getParticipantCount(day, memberId);
                 const paymentAmount = calculatePaymentAmount(day, memberId);
-                const hasPaid = day.paidMembers.includes(memberId) || memberData.isCore;
+                const hasPaid =
+                  day.paidMembers.includes(memberId) || memberData.isCore;
 
                 return (
                   <div
@@ -289,5 +290,3 @@ const BillModal: React.FC<BillModalProps> = ({
     </Dialog>
   );
 };
-
-export default BillModal;
