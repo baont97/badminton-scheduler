@@ -725,17 +725,13 @@ const Calendar: React.FC<CalendarProps> = ({
                         day,
                         memberId
                       );
-                      const isPaid = day.paidMembers.includes(memberId);
+                      const isPaid = day.paidMembers.includes(memberId) || member.isCore;
 
                       return (
                         <TooltipProvider key={memberId}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div
-                                className={`flex items-center w-full ${
-                                  isMobile ? "w-auto" : "w-full"
-                                }`}
-                              >
+                              <div className="flex items-center w-full">
                                 <div
                                   className={`flex items-center gap-3 p-2 rounded-lg w-full transition-all ${
                                     isPaid
@@ -761,20 +757,26 @@ const Calendar: React.FC<CalendarProps> = ({
                                   </div>
                                   {!isMobile && (
                                     <div className="flex flex-col flex-1">
-                                      <span className={`text-sm font-medium ${
-                                        isPaid ? "text-green-700" : "text-amber-700"
-                                      }`}>
+                                      <span
+                                        className={`text-sm font-medium ${
+                                          isPaid
+                                            ? "text-green-700"
+                                            : "text-amber-700"
+                                        }`}
+                                      >
                                         {member.name}
                                       </span>
-                                      <span className={`text-xs ${
-                                        isPaid
-                                          ? "text-green-600"
-                                          : "text-amber-600"
-                                      }`}>
+                                      <span
+                                        className={`text-xs ${
+                                          isPaid
+                                            ? "text-green-600"
+                                            : "text-amber-600"
+                                        }`}
+                                      >
                                         {isPaid ? (
                                           <span className="flex items-center gap-1">
                                             <Check className="h-3 w-3" />
-                                            Đã thanh toán
+                                            {member.isCore ? "Thành viên cứng" : "Đã thanh toán"}
                                           </span>
                                         ) : (
                                           <span className="flex items-center gap-1">
@@ -820,124 +822,88 @@ const Calendar: React.FC<CalendarProps> = ({
                   />
 
                   {user && (
-                    <div className="mt-4 space-y-2">
-                      {isParticipating ? (
-                        <div className="flex flex-col gap-2">
-                          <div className="text-sm text-center mb-1">
-                            <span className="font-medium">
-                              Số tiền cần trả:{" "}
-                            </span>
-                            <span
-                              className={`font-semibold ${
-                                calculatePaymentAmount(day, user.id) < 0
-                                  ? "text-green-600"
-                                  : "text-badminton"
-                              }`}
-                            >
-                              {formatCurrency(
-                                calculatePaymentAmount(day, user.id)
-                              )}
-                            </span>
-                            <span className="text-xs text-muted-foreground ml-1">
-                              ({getParticipantCount(day, user.id)} người)
-                            </span>
-                          </div>
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className={`w-full ${
-                              hasPaid
-                                ? "border-green-500 text-green-500 hover:bg-green-50"
-                                : "border-badminton text-badminton hover:bg-badminton/10"
-                            }`}
-                            onClick={() => handleTogglePaymentStatus(day.id)}
-                            disabled={loading}
-                          >
-                            {hasPaid ? (
-                              <>
-                                <Check className="h-4 w-4 mr-1" /> Đã thanh toán
-                              </>
-                            ) : (
-                              <>
-                                <CreditCard className="h-4 w-4 mr-1" /> Xác nhận
-                                thanh toán
-                              </>
-                            )}
-                          </Button>
-
-                          {(!isPast || isAdmin) && (
+                    <div className="mt-4">
+                      <div className="flex justify-end gap-2">
+                        {isParticipating ? (
+                          <>
                             <Button
                               variant="outline"
-                              size="sm"
-                              className="w-full border-red-500 text-red-500 hover:bg-red-50"
-                              onClick={() =>
-                                handleToggleParticipation(dayIndex)
-                              }
-                              disabled={loading || isDisabled}
+                              size="icon"
+                              className={`${
+                                hasPaid
+                                  ? "border-green-500 text-green-500 hover:bg-green-50"
+                                  : "border-badminton text-badminton hover:bg-badminton/10"
+                              }`}
+                              onClick={() => handleTogglePaymentStatus(day.id)}
+                              disabled={loading || user?.isCore}
                             >
-                              <X className="h-4 w-4 mr-1" /> Hủy tham gia
-                              {isParticipating && getRemainingTime(day) && (
-                                <span className="ml-2 text-xs">
-                                  (còn {getRemainingTime(day)})
-                                </span>
+                              {hasPaid ? (
+                                <Check className="h-4 w-4" />
+                              ) : (
+                                <CreditCard className="h-4 w-4" />
                               )}
                             </Button>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-2">
-                          {(!isPast || isAdmin) && (
-                            <>
-                              <div className="flex items-center justify-between mb-1">
-                                <label
-                                  htmlFor={`participant-count-${dayIndex}`}
-                                  className="text-sm"
-                                >
-                                  Số người tham gia:
-                                </label>
-                                <input
-                                  id={`participant-count-${dayIndex}`}
-                                  type="number"
-                                  min="1"
-                                  max={day.maxMembers}
-                                  defaultValue="1"
-                                  className="w-16 h-8 px-2 border rounded-md text-sm"
-                                  onChange={(e) => {
-                                    const count = parseInt(e.target.value) || 1;
-                                    if (count < 1) e.target.value = "1";
-                                    if (count > day.maxMembers)
-                                      e.target.value =
-                                        day.maxMembers.toString();
-                                  }}
-                                />
-                              </div>
 
+                            {(!isPast || isAdmin) && (
                               <Button
-                                className={`w-full ${
-                                  day.isActive
-                                    ? "bg-badminton hover:bg-badminton/80"
-                                    : "bg-gray-400 hover:bg-gray-500"
-                                }`}
-                                size="sm"
-                                onClick={() => {
-                                  const input = document.getElementById(
-                                    `participant-count-${dayIndex}`
-                                  ) as HTMLInputElement;
-                                  const count = parseInt(input.value) || 1;
-                                  handleToggleParticipation(dayIndex, count);
-                                }}
-                                disabled={
-                                  loading ||
-                                  isDisabled ||
-                                  totalParticipants >= day.maxMembers
-                                }
+                                variant="outline"
+                                size="icon"
+                                className="border-red-500 text-red-500 hover:bg-red-50"
+                                onClick={() => handleToggleParticipation(dayIndex)}
+                                disabled={loading || isDisabled}
                               >
-                                <CalendarIcon className="h-4 w-4 mr-1" /> Tham
-                                gia
+                                <X className="h-4 w-4" />
                               </Button>
-                            </>
-                          )}
+                            )}
+                          </>
+                        ) : (
+                          !isPast && (
+                            <Button
+                              size="icon"
+                              className={`${
+                                day.isActive
+                                  ? "bg-badminton hover:bg-badminton/80"
+                                  : "bg-gray-400 hover:bg-gray-500"
+                              }`}
+                              onClick={() => handleToggleParticipation(dayIndex, 1)}
+                              disabled={
+                                loading ||
+                                isDisabled ||
+                                totalParticipants >= day.maxMembers
+                              }
+                            >
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
+                          )
+                        )}
+
+                        {isAfterGameTimeWithBuffer(day.date, day.sessionTime) && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="border-badminton text-badminton hover:bg-badminton/10"
+                            onClick={() => handleOpenBill(day)}
+                          >
+                            <Receipt className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+
+                      {isParticipating && (
+                        <div className="text-sm text-center mt-2">
+                          <span className="font-medium">Số tiền cần trả: </span>
+                          <span
+                            className={`font-semibold ${
+                              calculatePaymentAmount(day, user.id) < 0
+                                ? "text-green-600"
+                                : "text-badminton"
+                            }`}
+                          >
+                            {formatCurrency(calculatePaymentAmount(day, user.id))}
+                          </span>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            ({getParticipantCount(day, user.id)} người)
+                          </span>
                         </div>
                       )}
                     </div>
@@ -948,20 +914,6 @@ const Calendar: React.FC<CalendarProps> = ({
                       <AdminAddUserDialog dayIndex={dayIndex} />
                     </div>
                   )}
-
-                  <div className="mt-3 flex justify-center">
-                    {isAfterGameTimeWithBuffer(day.date, day.sessionTime) && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-xs border-badminton text-badminton hover:bg-badminton/10"
-                        onClick={() => handleOpenBill(day)}
-                      >
-                        <Receipt className="h-3.5 w-3.5 mr-1" />
-                        Xem hóa đơn
-                      </Button>
-                    )}
-                  </div>
                 </div>
               );
             })}

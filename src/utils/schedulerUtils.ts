@@ -88,7 +88,20 @@ export const calculateCostPerPerson = (
   return { totalDays, totalCost };
 };
 
+export const isAllMembersPaid = (day: CalendarDay): boolean => {
+  if (day.members.length === 0) return false;
+  if (!isPastDay(day.date)) return false;
+
+  return day.members.every((memberId) => {
+    const memberData = members.find((m) => m.id === memberId);
+    return day.paidMembers.includes(memberId) || memberData?.isCore;
+  });
+};
+
 export const calculatePaymentAmount = (day: CalendarDay, memberId: string): number => {
+  const memberData = members.find((m) => m.id === memberId);
+  if (memberData?.isCore) return 0;
+  
   const totalParticipants = getTotalParticipantsInDay(day);
   if (totalParticipants === 0) return 0;
   
@@ -104,3 +117,4 @@ export const calculatePaymentAmount = (day: CalendarDay, memberId: string): numb
   
   return totalCost - expensesCredit;
 };
+
