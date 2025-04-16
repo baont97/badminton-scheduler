@@ -28,6 +28,7 @@ import {
   RefreshCw,
   Ban,
   UserPlus,
+  Clock,
 } from "lucide-react";
 import {
   Tooltip,
@@ -715,7 +716,7 @@ const Calendar: React.FC<CalendarProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-2">
                     {day.members.map((memberId) => {
                       const member = members.find((m) => m.id === memberId);
                       if (!member) return null;
@@ -731,36 +732,69 @@ const Calendar: React.FC<CalendarProps> = ({
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <div
-                                className={`flex items-center ${
-                                  isMobile ? "" : "gap-2 bg-gray-100 rounded-lg p-2"
+                                className={`flex items-center w-full ${
+                                  isMobile ? "w-auto" : "w-full"
                                 }`}
                               >
-                                <div className="relative">
-                                  <ClickableAvatar
-                                    name={member.name}
-                                    imageUrl={member.avatarUrl}
-                                    size="sm"
-                                    className={isPaid ? "opacity-50" : ""}
-                                  />
-                                  {participantCount > 1 && (
-                                    <Badge
-                                      className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
-                                      variant="default"
-                                    >
-                                      {participantCount}
-                                    </Badge>
+                                <div
+                                  className={`flex items-center gap-3 p-2 rounded-lg w-full transition-all ${
+                                    isPaid
+                                      ? "bg-green-50 border border-green-200"
+                                      : "bg-amber-50 border border-amber-200"
+                                  }`}
+                                >
+                                  <div className="relative">
+                                    <ClickableAvatar
+                                      name={member.name}
+                                      imageUrl={member.avatarUrl}
+                                      size="sm"
+                                      className={isPaid ? "opacity-80" : ""}
+                                    />
+                                    {participantCount > 1 && (
+                                      <Badge
+                                        className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+                                        variant={isPaid ? "default" : "secondary"}
+                                      >
+                                        {participantCount}
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {!isMobile && (
+                                    <div className="flex flex-col flex-1">
+                                      <span className={`text-sm font-medium ${
+                                        isPaid ? "text-green-700" : "text-amber-700"
+                                      }`}>
+                                        {member.name}
+                                      </span>
+                                      <span className={`text-xs ${
+                                        isPaid
+                                          ? "text-green-600"
+                                          : "text-amber-600"
+                                      }`}>
+                                        {isPaid ? (
+                                          <span className="flex items-center gap-1">
+                                            <Check className="h-3 w-3" />
+                                            Đã thanh toán
+                                          </span>
+                                        ) : (
+                                          <span className="flex items-center gap-1">
+                                            <Clock className="h-3 w-3" />
+                                            Chưa thanh toán
+                                          </span>
+                                        )}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {!isMobile && (
+                                    <div className={`text-xs font-medium rounded-full px-2 py-1 ${
+                                      isPaid
+                                        ? "bg-green-100 text-green-700"
+                                        : "bg-amber-100 text-amber-700"
+                                    }`}>
+                                      {formatCurrency(calculatePaymentAmount(day, memberId))}
+                                    </div>
                                   )}
                                 </div>
-                                {!isMobile && (
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-medium">
-                                      {member.name}
-                                    </span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {isPaid ? "Đã thanh toán" : "Chưa thanh toán"}
-                                    </span>
-                                  </div>
-                                )}
                               </div>
                             </TooltipTrigger>
                             {isMobile && (
@@ -770,7 +804,7 @@ const Calendar: React.FC<CalendarProps> = ({
                                   {participantCount > 1
                                     ? ` (${participantCount} người)`
                                     : ""}
-                                  {isPaid ? " - Đã thanh toán" : ""}
+                                  {isPaid ? " - Đã thanh toán" : " - Chưa thanh toán"}
                                 </p>
                               </TooltipContent>
                             )}
