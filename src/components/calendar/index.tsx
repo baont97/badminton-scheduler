@@ -1,11 +1,10 @@
 // src/components/Calendar/index.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { CalendarDay, Member } from "@/utils/schedulerUtils";
 import { CalendarHeader } from "./CalendarHeader";
 import { CalendarEmptyState } from "./CalendarEmptyState";
 import { CalendarGrid } from "./CalendarGrid";
 import { BillModal } from "../BillModal";
-import { useSyncPaymentStatus } from "@/hooks/useSyncPaymentStatus";
 
 interface CalendarProps {
   days: CalendarDay[];
@@ -31,16 +30,6 @@ const Calendar: React.FC<CalendarProps> = ({
   const [selectedDayForBill, setSelectedDayForBill] =
     useState<CalendarDay | null>(null);
   const [billModalOpen, setBillModalOpen] = useState(false);
-
-  // Sync payment status based on URL parameters when returning from MoMo payment
-  const paymentCompleted = useSyncPaymentStatus();
-
-  useEffect(() => {
-    // Refresh data when payment is completed
-    if (paymentCompleted) {
-      refreshData();
-    }
-  }, [paymentCompleted, refreshData]);
 
   const handleOpenBill = (day: CalendarDay) => {
     setSelectedDayForBill(day);

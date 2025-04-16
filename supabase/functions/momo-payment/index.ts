@@ -1,19 +1,8 @@
 // supabase/functions/momo-payment/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.38.4";
-import * as crypto from "https://deno.land/std@0.170.0/node/crypto.ts";
 
-// MoMo API configuration
-const CONFIG = {
-  // Replace with your actual MoMo API credentials
-  PARTNER_CODE: "MOMOTBOI20250416_TEST", // Your MoMo Partner Code
-  ACCESS_KEY: "fWl4OLA6qmtXCa0s", // Your MoMo Access Key
-  SECRET_KEY: "rRr3x4AKtBaxvj4rEhWRWhbVVFbRsOvL", // Your MoMo Secret Key
-  API_ENDPOINT: "https://test-payment.momo.vn/v2/gateway/api/create", // Use the production URL for production
-  IPN_URL: "https://ealcbtnmofspramewvsl.functions.supabase.co/momo-payment", // Your IPN URL
-  REDIRECT_URL: "https://badminton-app.vercel.app/payment-result", // Frontend URL to redirect after payment
-};
-
+// CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -27,46 +16,58 @@ serve(async (req) => {
   }
 
   try {
-    // Initialize Supabase client with service role key for admin operations
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    // Get request URL to determine the endpoint
     const url = new URL(req.url);
-    const pathSegments = url.pathname.split("/").filter(Boolean);
-    const endpoint = pathSegments[pathSegments.length - 1];
+    const path = url.pathname.split("/").pop(); // Get the last part of the path
 
-    // Route based on endpoint
-    if (endpoint === "initiate") {
-      // Handle payment initiation
-      return await handleInitiatePayment(req, supabase);
-    } else {
-      // Handle IPN callback
-      return await handleIpnCallback(req, supabase);
+    if (req.method === "POST") {
+      // Route based on the path
+      if (!path || path === "create-payment") {
+        return await handleCreatePayment(req);
+      } else if (path === "check-payment-status") {
+        return await handleCheckPaymentStatus(req);
+      }
     }
-  } catch (error) {
-    console.error("Unexpected error:", error);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
+
+    return new Response(JSON.stringify({ error: "Unsupported route" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+      status: 404,
     });
+  } catch (error) {
+    console.error("Error processing request:", error);
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+        message: error.message,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
 });
 
-// Function to initiate MoMo payment
-async function handleInitiatePayment(req: Request, supabase: any) {
+/**
+ * Handle creating a new Momo payment
+ */
+async function handleCreatePayment(req: Request): Promise<Response> {
   try {
     // Parse request body
     const {
-      dayId,
-      userId,
       amount,
-      orderInfo = "Payment for badminton session",
+      orderId,
+      orderInfo,
+      redirectUrl,
+      ipnUrl,
+      extraData,
+      userInfo,
+      items,
+      dayId,
+      // Không lấy userId từ request nữa
     } = await req.json();
 
-    // Validate input data
-    if (!dayId || !userId || !amount) {
+    // Validate required parameters
+    if (!amount || !orderId || !orderInfo || !redirectUrl || !dayId) {
       return new Response(
         JSON.stringify({ error: "Missing required parameters" }),
         {
@@ -76,181 +77,89 @@ async function handleInitiatePayment(req: Request, supabase: any) {
       );
     }
 
-    // Verify the user exists
-    const { data: userData, error: userError } = await supabase
-      .from("profiles")
-      .select("user_name")
-      .eq("id", userId)
+    // Xác thực và lấy userId từ token
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Authentication required" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        }
+      );
+    }
+
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Lấy thông tin người dùng từ token
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+
+    if (authError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized - Invalid token" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        }
+      );
+    }
+
+    // Lấy userId từ user object
+    const userId = user.id;
+
+    // Kiểm tra xem người dùng có tham gia sự kiện này không
+    const { data: participant, error: participantError } = await supabase
+      .from("badminton_participants")
+      .select("id, has_paid")
+      .eq("user_id", userId)
+      .eq("day_id", dayId)
       .single();
 
-    if (userError || !userData) {
-      return new Response(JSON.stringify({ error: "User not found" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
+    if (participantError) {
+      return new Response(
+        JSON.stringify({ error: "User is not a participant for this event" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
     }
 
-    // Generate unique order ID
-    const orderId = `BDMNTN_${dayId.substring(0, 8)}_${userId.substring(
-      0,
-      8
-    )}_${Date.now()}`;
-    const requestId = crypto.randomUUID();
+    // Kiểm tra xem người dùng đã thanh toán chưa
+    if (participant.has_paid) {
+      return new Response(
+        JSON.stringify({ error: "User has already paid for this event" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
+    }
 
-    // Create MoMo payment request
-    const requestData = {
-      partnerCode: CONFIG.PARTNER_CODE,
-      partnerName: "Badminton Payment",
-      storeId: "BadmintonStoreID",
-      requestId: requestId,
-      amount: amount,
-      orderId: orderId,
-      orderInfo: orderInfo,
-      redirectUrl: CONFIG.REDIRECT_URL,
-      ipnUrl: CONFIG.IPN_URL,
-      lang: "vi",
-      extraData: Buffer.from(
-        JSON.stringify({
-          dayId,
-          userId,
-          timestamp: Date.now(),
-        })
-      ).toString("base64"),
-      requestType: "captureWallet",
-      autoCapture: true,
+    // Cấu hình MoMo
+    const momoConfig = {
+      partnerCode: Deno.env.get("MOMO_PARTNER_CODE") || "",
+      accessKey: Deno.env.get("MOMO_ACCESS_KEY") || "",
+      secretKey: Deno.env.get("MOMO_SECRET_KEY") || "",
+      endpoint:
+        Deno.env.get("MOMO_ENDPOINT") ||
+        "https://test-payment.momo.vn/v2/gateway/api/create",
     };
 
-    // Generate signature
-    const rawSignature = `accessKey=${CONFIG.ACCESS_KEY}&amount=${requestData.amount}&extraData=${requestData.extraData}&ipnUrl=${requestData.ipnUrl}&orderId=${requestData.orderId}&orderInfo=${requestData.orderInfo}&partnerCode=${requestData.partnerCode}&redirectUrl=${requestData.redirectUrl}&requestId=${requestData.requestId}&requestType=${requestData.requestType}`;
-    const signature = crypto
-      .createHmac("sha256", CONFIG.SECRET_KEY)
-      .update(rawSignature)
-      .digest("hex");
-
-    requestData.signature = signature;
-
-    // Call MoMo API
-    const response = await fetch(CONFIG.API_ENDPOINT, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(requestData),
-    });
-
-    // Get MoMo response
-    const responseData = await response.json();
-
-    // Store payment request in Supabase
-    await supabase.from("payment_transactions").insert({
-      order_id: orderId,
-      request_id: requestId,
-      day_id: dayId,
-      user_id: userId,
-      amount: amount,
-      status: "pending",
-      payment_data: responseData,
-    });
-
-    // Return response to client
-    return new Response(JSON.stringify(responseData), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (error) {
-    console.error("Error initiating payment:", error);
-    return new Response(
-      JSON.stringify({ error: "Failed to initiate payment" }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
-    );
-  }
-}
-
-// Function to handle IPN callback
-async function handleIpnCallback(req: Request, supabase: any) {
-  try {
-    // Parse request body
-    const callbackData = await req.json();
-    console.log("Received IPN callback:", callbackData);
-
-    // Validate the callback signature
-    if (!validateSignature(callbackData)) {
-      console.error("Invalid signature in IPN callback");
-      return new Response(JSON.stringify({ message: "Invalid signature" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
-    }
-
-    // Extract data from the callback
-    const { orderId, requestId, resultCode, amount, extraData } = callbackData;
-
-    // Check if payment was successful
-    if (resultCode !== 0) {
-      console.log(`Payment failed with result code: ${resultCode}`);
-
-      // Update transaction status
-      await supabase
-        .from("payment_transactions")
-        .update({ status: "failed", response_data: callbackData })
-        .eq("order_id", orderId)
-        .eq("request_id", requestId);
-
-      return new Response(JSON.stringify({ message: "Payment failed" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
-    }
-
-    // Decode extra data
-    let decodedData;
-    try {
-      const decodedString = atob(extraData);
-      decodedData = JSON.parse(decodedString);
-    } catch (error) {
-      console.error("Error decoding extra data:", error);
-      return new Response(JSON.stringify({ message: "Invalid extraData" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
-    }
-
-    const { dayId, userId } = decodedData;
-
-    // Validate the extracted data
-    if (!dayId || !userId) {
-      console.error("Missing dayId or userId in extraData");
-      return new Response(JSON.stringify({ message: "Invalid payment data" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 400,
-      });
-    }
-
-    // Update payment transaction
-    await supabase
-      .from("payment_transactions")
-      .update({
-        status: "completed",
-        response_data: callbackData,
-        completed_at: new Date().toISOString(),
-      })
-      .eq("order_id", orderId)
-      .eq("request_id", requestId);
-
-    // Update badminton_participants has_paid status
-    const { error: updateError } = await supabase
-      .from("badminton_participants")
-      .update({ has_paid: true })
-      .eq("day_id", dayId)
-      .eq("user_id", userId);
-
-    if (updateError) {
-      console.error("Error updating badminton_participants:", updateError);
+    if (
+      !momoConfig.partnerCode ||
+      !momoConfig.accessKey ||
+      !momoConfig.secretKey
+    ) {
+      console.error("Missing Momo configuration");
       return new Response(
-        JSON.stringify({ message: "Error updating payment status" }),
+        JSON.stringify({ error: "Payment service is not properly configured" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 500,
@@ -258,18 +167,125 @@ async function handleIpnCallback(req: Request, supabase: any) {
       );
     }
 
-    // Return success response to MoMo
+    // Create requestId
+    const requestId = crypto.randomUUID();
+
+    // Store userId and dayId in extraData
+    const customExtraData = JSON.stringify({
+      userId: userId,
+      dayId: dayId,
+      customData: extraData ? JSON.parse(extraData) : {},
+    });
+
+    // Base64 encode extraData
+    const encodedExtraData = btoa(customExtraData);
+
+    // Prepare request data for Momo
+    const requestData = {
+      partnerCode: momoConfig.partnerCode,
+      accessKey: momoConfig.accessKey,
+      requestId: requestId,
+      amount: amount.toString(),
+      orderId: orderId,
+      orderInfo: orderInfo,
+      redirectUrl: redirectUrl,
+      ipnUrl: "https://ealcbtnmofspramewvsl.supabase.co/functions/v1/momo-ipn",
+      extraData: encodedExtraData,
+      requestType: "captureWallet",
+    };
+
+    // Add optional fields if provided
+    if (userInfo) {
+      // @ts-ignore - Adding optional field
+      requestData.userInfo = userInfo;
+    }
+
+    if (items && items.length > 0) {
+      // @ts-ignore - Adding optional field
+      requestData.items = items;
+    }
+
+    // Create signature
+    const rawSignature = Object.keys(requestData)
+      .sort()
+      .map((key) => `${key}=${requestData[key as keyof typeof requestData]}`)
+      .join("&");
+
+    const signature = await createHmacSignature(
+      rawSignature,
+      momoConfig.secretKey
+    );
+
+    // Add signature to request
+    const paymentRequest = {
+      ...requestData,
+      signature: signature,
+      lang: "vi",
+    };
+
+    console.log("Sending request to Momo:", {
+      requestId: requestId,
+      orderId: orderId,
+      userId: userId,
+    });
+
+    // Send request to Momo
+    const response = await fetch(momoConfig.endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(paymentRequest),
+    });
+
+    const responseData = await response.json();
+
+    // Log response
+    console.log("Momo response received:", {
+      resultCode: responseData.resultCode,
+      orderId: orderId,
+    });
+
+    // Đảm bảo amount là số nguyên
+    const parsedAmount = Math.round(Number(amount));
+
+    // Save transaction
+    const { error: transactionError } = await supabase
+      .from("momo_transactions")
+      .insert({
+        partner_code: momoConfig.partnerCode,
+        request_id: requestId,
+        order_id: orderId,
+        amount: parsedAmount,
+        signature: signature,
+        badminton_participant_id: participant.id,
+      });
+
+    if (transactionError) {
+      console.error("Error saving transaction", transactionError);
+    }
+
+    // Return payment URL
     return new Response(
-      JSON.stringify({ message: "Payment processed successfully" }),
+      JSON.stringify({
+        success: responseData.resultCode === 0,
+        message: responseData.message || "Unknown error",
+        payUrl: responseData.payUrl,
+        orderId: orderId,
+        requestId: requestId,
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
+        status: responseData.resultCode === 0 ? 200 : 400,
       }
     );
   } catch (error) {
-    console.error("Error processing IPN callback:", error);
+    console.error("Error creating payment:", error);
     return new Response(
-      JSON.stringify({ error: "Failed to process payment callback" }),
+      JSON.stringify({
+        error: "Error creating payment",
+        message: error.message,
+      }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 500,
@@ -278,39 +294,226 @@ async function handleIpnCallback(req: Request, supabase: any) {
   }
 }
 
-// Helper function to validate MoMo signature in callback
-function validateSignature(callbackData: any): boolean {
+/**
+ * Handle checking the status of a Momo payment
+ */
+async function handleCheckPaymentStatus(req: Request): Promise<Response> {
   try {
-    const { signature, ...dataWithoutSignature } = callbackData;
+    // Xác thực người dùng
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // Sort keys alphabetically
-    const sortedKeys = Object.keys(dataWithoutSignature).sort();
+    // Parse request body
+    const { orderId } = await req.json();
+    if (!orderId) {
+      return new Response(JSON.stringify({ error: "Missing orderId" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    // Build raw signature string
-    let rawSignature = "";
-    for (const key of sortedKeys) {
-      if (
-        dataWithoutSignature[key] !== null &&
-        dataWithoutSignature[key] !== undefined
-      ) {
-        rawSignature += `&${key}=${dataWithoutSignature[key]}`;
+    // Khởi tạo Supabase client
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Lấy thông tin người dùng từ token
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Lấy thông tin giao dịch
+    const { data: transaction, error: txError } = await supabase
+      .from("momo_transactions")
+      .select(
+        `
+        order_id, 
+        is_processed, 
+        is_verified, 
+        payment_status,
+        badminton_participant_id,
+        badminton_participants:badminton_participant_id(user_id, day_id, has_paid)
+      `
+      )
+      .eq("order_id", orderId)
+      .single();
+
+    if (txError) {
+      return new Response(JSON.stringify({ error: "Transaction not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Kiểm tra transaction thuộc về người dùng hiện tại
+    if (transaction.badminton_participants?.user_id !== user.id) {
+      return new Response(
+        JSON.stringify({ error: "Access denied to this transaction" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    // Nếu giao dịch chưa được xử lý hoàn tất, kiểm tra với MoMo
+    if (!transaction.is_processed) {
+      // Kiểm tra với MoMo API
+      const momoConfig = {
+        partnerCode: Deno.env.get("MOMO_PARTNER_CODE") || "",
+        secretKey: Deno.env.get("MOMO_SECRET_KEY") || "",
+        verifyEndpoint:
+          Deno.env.get("MOMO_VERIFY_ENDPOINT") ||
+          "https://test-payment.momo.vn/v2/gateway/api/query",
+      };
+
+      // Tạo requestId mới để kiểm tra
+      const verifyRequestId = crypto.randomUUID();
+
+      // Chuẩn bị request kiểm tra
+      const verifyRequest = {
+        partnerCode: momoConfig.partnerCode,
+        requestId: verifyRequestId,
+        orderId: orderId,
+        lang: "vi",
+      };
+
+      // Tạo chữ ký
+      const rawSignature = Object.keys(verifyRequest)
+        .sort()
+        .map(
+          (key) => `${key}=${verifyRequest[key as keyof typeof verifyRequest]}`
+        )
+        .join("&");
+
+      const signature = await createHmacSignature(
+        rawSignature,
+        momoConfig.secretKey
+      );
+
+      // Gửi request đến MoMo
+      const momoResponse = await fetch(momoConfig.verifyEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...verifyRequest,
+          signature: signature,
+        }),
+      });
+
+      const momoResponseData = await momoResponse.json();
+
+      // Kiểm tra kết quả
+      const isPaymentSuccessful =
+        momoResponseData.resultCode === 0 && momoResponseData.status === 0;
+
+      if (isPaymentSuccessful) {
+        // Cập nhật momo_transactions
+        await supabase
+          .from("momo_transactions")
+          .update({
+            is_processed: true,
+            is_verified: true,
+            payment_status: "Success", // Ghi rõ trạng thái thành "Success"
+            processed_at: new Date().toISOString(),
+          })
+          .eq("order_id", orderId);
+
+        // Cập nhật badminton_participants
+        await supabase
+          .from("badminton_participants")
+          .update({ has_paid: true })
+          .eq("id", transaction.badminton_participant_id);
+
+        // Cập nhật thông tin để trả về
+        transaction.is_processed = true;
+        transaction.is_verified = true;
+        transaction.payment_status = momoResponseData.transactionStatus;
+        transaction.badminton_participants.has_paid = true;
+      } else if (momoResponseData.status === 2) {
+        // 1006 = đang xử lý
+        // Giao dịch thất bại
+        await supabase
+          .from("momo_transactions")
+          .update({
+            is_processed: true,
+            is_verified: false,
+            payment_status: "Failed",
+            processed_at: new Date().toISOString(),
+          })
+          .eq("order_id", orderId);
+
+        // Cập nhật thông tin để trả về
+        transaction.is_processed = true;
+        transaction.is_verified = false;
+        transaction.payment_status =
+          momoResponseData.transactionStatus || "Failed";
       }
     }
 
-    // Remove leading '&' if present
-    if (rawSignature.startsWith("&")) {
-      rawSignature = rawSignature.substring(1);
-    }
-
-    // Generate signature
-    const calculatedSignature = crypto
-      .createHmac("sha256", CONFIG.SECRET_KEY)
-      .update(rawSignature)
-      .digest("hex");
-
-    return calculatedSignature === signature;
+    // Trả về trạng thái giao dịch
+    return new Response(
+      JSON.stringify({
+        orderId: transaction.order_id,
+        status: transaction.payment_status,
+        isVerified: transaction.is_verified,
+        isProcessed: transaction.is_processed,
+        participantHasPaid:
+          transaction.badminton_participants?.has_paid || false,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   } catch (error) {
-    console.error("Error validating signature:", error);
-    return false;
+    console.error("Error checking payment status:", error);
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+}
+
+/**
+ * Create HMAC SHA256 signature
+ */
+async function createHmacSignature(
+  message: string,
+  key: string
+): Promise<string> {
+  try {
+    const keyData = new TextEncoder().encode(key);
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      keyData,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const messageData = new TextEncoder().encode(message);
+    const signature = await crypto.subtle.sign("HMAC", cryptoKey, messageData);
+
+    // Convert to hex
+    return Array.from(new Uint8Array(signature))
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
+  } catch (error) {
+    console.error("Error creating HMAC signature:", error);
+    throw error;
   }
 }

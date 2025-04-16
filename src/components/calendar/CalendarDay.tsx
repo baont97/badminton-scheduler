@@ -1,7 +1,7 @@
 // src/components/Calendar/CalendarDay.tsx
 import React from "react";
 import { Button } from "@/components/ui/button";
-import { Check, X, CreditCard, UserPlus, Receipt, Ban } from "lucide-react";
+import { X, UserPlus, Receipt, Ban } from "lucide-react";
 import {
   CalendarDay as CalendarDayType,
   Member,
@@ -28,7 +28,6 @@ import {
 } from "@/utils/apiUtils";
 import { toast } from "sonner";
 import MomoPaymentButton from "@/components/MomoPaymentButton";
-
 interface CalendarDayProps {
   day: CalendarDayType;
   dayIndex: number;
@@ -211,6 +210,18 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
     }
   };
 
+  const handlePaymentSuccess = () => {
+    // Cập nhật trạng thái ngày khi thanh toán thành công
+    if (user) {
+      const updatedDay = {
+        ...day,
+        paidMembers: [...day.paidMembers, user.id],
+      };
+
+      onUpdateDay(updatedDay);
+    }
+  };
+
   return (
     <div
       className={`calendar-day p-3 sm:p-4 relative ${
@@ -306,39 +317,6 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
           <div className="flex justify-end gap-2">
             {isParticipating ? (
               <>
-                {!members.find((m) => m.id === user.id)?.isCore && (
-                  <>
-                    {/* Manual payment button */}
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      className={`${
-                        hasPaid
-                          ? "border-green-500 text-green-500 hover:bg-green-50"
-                          : "border-badminton text-badminton hover:bg-badminton/10"
-                      }`}
-                      onClick={() => handleTogglePaymentStatus()}
-                      disabled={loading}
-                    >
-                      {hasPaid ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <CreditCard className="h-4 w-4" />
-                      )}
-                    </Button>
-
-                    {/* MoMo payment button - only show if not paid */}
-                    {!hasPaid && (
-                      <MomoPaymentButton
-                        dayId={day.id}
-                        date={day.date}
-                        sessionCost={calculatePaymentAmount(day, user.id)}
-                        disabled={loading}
-                      />
-                    )}
-                  </>
-                )}
-
                 {(!isPast || isAdmin) && (
                   <Button
                     variant="outline"
@@ -371,14 +349,27 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
             )}
 
             {isAfterGameTimeWithBuffer(day.date, day.sessionTime) && (
-              <Button
-                variant="outline"
-                size="icon"
-                className="border-badminton text-badminton hover:bg-badminton/10"
-                onClick={() => onOpenBill(day)}
-              >
-                <Receipt className="h-4 w-4" />
-              </Button>
+              <>
+                {isParticipating &&
+                  !hasPaid &&
+                  !members.find((m) => m.id === user?.id)?.isCore && (
+                    <MomoPaymentButton
+                      dayId={day.id}
+                      dayDate={formatDate(day.date)}
+                      amount={calculatePaymentAmount(day, user?.id || "")}
+                      onPaymentSuccess={handlePaymentSuccess}
+                      disabled={loading}
+                    />
+                  )}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="border-badminton text-badminton hover:bg-badminton/10"
+                  onClick={() => onOpenBill(day)}
+                >
+                  <Receipt className="h-4 w-4" />
+                </Button>
+              </>
             )}
           </div>
 

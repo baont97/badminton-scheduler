@@ -9,7 +9,6 @@ import { fetchUsers, fetchBadmintonDays } from "@/utils/apiUtils";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "react-router-dom";
-import { useSyncPaymentStatus } from "@/hooks/useSyncPaymentStatus";
 
 const Index = () => {
   const queryClient = useQueryClient();
@@ -18,8 +17,6 @@ const Index = () => {
   const [days, setDays] = useState<CalendarDay[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1); // 1-indexed month
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
-
-  const paymentCompleted = useSyncPaymentStatus();
 
   // Check for payment return URL parameters
   useEffect(() => {
@@ -34,12 +31,6 @@ const Index = () => {
       });
     }
   }, [location.search, queryClient]);
-
-  useEffect(() => {
-    if (paymentCompleted) {
-      refreshCalendarData();
-    }
-  }, [paymentCompleted]);
 
   const {
     data: userData,
