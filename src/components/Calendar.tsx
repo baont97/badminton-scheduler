@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   CalendarDay,
   Member,
@@ -26,6 +27,7 @@ import {
   CreditCard,
   RefreshCw,
   Ban,
+  UserPlus,
 } from "lucide-react";
 import {
   Tooltip,
@@ -33,6 +35,20 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Receipt } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -65,12 +81,12 @@ const Calendar: React.FC<CalendarProps> = ({
   const [hidePaidDays, setHidePaidDays] = useState(true);
   const { user, profile } = useAuth();
   const isAdmin = profile?.is_admin === true;
+  const isMobile = useIsMobile();
 
   const isPastDay = (date: string): boolean => {
     const now = new Date();
     const dayDate = new Date(date);
 
-    // Set both dates to start of day for date comparison
     now.setHours(0, 0, 0, 0);
     dayDate.setHours(0, 0, 0, 0);
 
@@ -133,26 +149,20 @@ const Calendar: React.FC<CalendarProps> = ({
   ): boolean => {
     const gameDate = new Date(date);
 
-    // Extract end time from session_time format (e.g., "19:00-21:00")
-    const endTimeString = sessionTime.split("-")[1]?.trim() || "21:00"; // Default to 21:00
+    const endTimeString = sessionTime.split("-")[1]?.trim() || "21:00";
     const [hours, minutes] = endTimeString.split(":").map(Number);
 
-    // Set the game end time
     gameDate.setHours(hours, minutes, 0, 0);
 
-    // Add 2 hours buffer
     gameDate.setHours(gameDate.getHours() + 2);
 
-    // Compare current time with buffered time
     return new Date() > gameDate;
   };
 
-  // Add these state variables to your Calendar component
   const [selectedDayForBill, setSelectedDayForBill] =
     useState<CalendarDay | null>(null);
   const [billModalOpen, setBillModalOpen] = useState(false);
 
-  // Add this function to handle opening the bill modal
   const handleOpenBill = (day: CalendarDay) => {
     setSelectedDayForBill(day);
     setBillModalOpen(true);
@@ -167,25 +177,25 @@ const Calendar: React.FC<CalendarProps> = ({
 
   const handleToggleParticipation = async (
     dayIndex: number,
-    participantCount: number = 1
+    participantCount: number = 1,
+    userId?: string
   ) => {
-    if (!user) {
+    if (!user && !userId) {
       toast.error("Vui lòng đăng nhập để tham gia");
       return;
     }
 
     const day = days[dayIndex];
+    const targetUserId = userId || user?.id;
 
-    if ((isPastDay(day.date) || !day.isActive) && !isAdmin) {
-      toast.error("Không thể thay đổi tham gia cho ngày này");
-      return;
-    }
+    if (!targetUserId) return;
 
-    const isMemberInDay = day.members.includes(user.id);
-    const isUserCoreMember = members.some((m) => m.id === user?.id && m.isCore);
+    const isMemberInDay = day.members.includes(targetUserId);
+    const isUserCoreMember = members.some(
+      (m) => m.id === targetUserId && m.isCore
+    );
 
-    // Check if user is trying to cancel within 1 hour of session start
-    if (isMemberInDay && isWithinOneHourOfSession(day) && !isAdmin) {
+    if (!profile?.is_admin && isMemberInDay && isWithinOneHourOfSession(day)) {
       toast.error(
         "Không thể hủy tham gia trong vòng 1 tiếng trước giờ đánh cầu"
       );
@@ -193,9 +203,8 @@ const Calendar: React.FC<CalendarProps> = ({
     }
 
     const currentTotal = getTotalParticipantsInDay(day);
-
     const userCurrentCount = isMemberInDay
-      ? getParticipantCount(day, user.id)
+      ? getParticipantCount(day, targetUserId)
       : 0;
     const newTotal = isMemberInDay
       ? currentTotal - userCurrentCount
@@ -210,7 +219,7 @@ const Calendar: React.FC<CalendarProps> = ({
 
     const success = await toggleParticipation(
       day.id,
-      user.id,
+      targetUserId,
       isMemberInDay,
       participantCount
     );
@@ -220,44 +229,41 @@ const Calendar: React.FC<CalendarProps> = ({
       const actualDayIndex = days.findIndex((d) => d.id === day.id);
 
       if (isMemberInDay) {
-        // If a core member is canceling, track this to prevent auto re-adding
         const removedCoreMembers = isUserCoreMember
-          ? [...(day._removedCoreMembers || []), user.id]
+          ? [...(day._removedCoreMembers || []), targetUserId]
           : day._removedCoreMembers;
 
         updatedDays[actualDayIndex] = {
           ...days[actualDayIndex],
-          members: days[actualDayIndex].members.filter((id) => id !== user.id),
-          paidMembers: days[actualDayIndex].paidMembers.filter(
-            (id) => id !== user.id
+          members: days[actualDayIndex].members.filter(
+            (id) => id !== targetUserId
           ),
-          slots: days[actualDayIndex].slots.filter((s) => s[0] !== user.id),
+          paidMembers: days[actualDayIndex].paidMembers.filter(
+            (id) => id !== targetUserId
+          ),
+          slots: days[actualDayIndex].slots.filter((s) => s[0] !== targetUserId),
           _removedCoreMembers: removedCoreMembers,
         };
-
-        if (isUserCoreMember) {
-          toast.success(
-            "Đã hủy tham gia thành công. Bạn sẽ không được tự động thêm lại cho ngày này."
-          );
-        }
       } else {
-        // If a core member is joining again, remove from the removed list
         let removedCoreMembers = day._removedCoreMembers;
-        if (isUserCoreMember && removedCoreMembers?.includes(user.id)) {
+        if (isUserCoreMember && removedCoreMembers?.includes(targetUserId)) {
           removedCoreMembers = removedCoreMembers.filter(
-            (id) => id !== user.id
+            (id) => id !== targetUserId
           );
         }
 
         updatedDays[actualDayIndex] = {
           ...days[actualDayIndex],
-          members: [...days[actualDayIndex].members, user.id],
-          slots: [...days[actualDayIndex].slots, [user.id, participantCount]],
+          members: [...days[actualDayIndex].members, targetUserId],
+          slots: [...days[actualDayIndex].slots, [targetUserId, participantCount]],
           _removedCoreMembers: removedCoreMembers,
         };
       }
 
       onUpdateDays(updatedDays);
+      toast.success(
+        isMemberInDay ? "Đã hủy tham gia thành công" : "Đã tham gia thành công"
+      );
     } else {
       toast.error("Có lỗi xảy ra khi cập nhật trạng thái tham gia");
     }
@@ -332,6 +338,111 @@ const Calendar: React.FC<CalendarProps> = ({
     onChangeMonth(newMonth, newYear);
   };
 
+  const handleGenerateDays = async () => {
+    if (!isAdmin) {
+      toast.error("Bạn không có quyền tạo buổi tập");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const generatedDays = await generateBadmintonDays(
+        currentYear,
+        currentMonth
+      );
+      if (generatedDays.length > 0) {
+        toast.success("Đã tạo buổi tập thành công");
+        refreshData();
+      } else {
+        toast.error("Không thể tạo buổi tập");
+      }
+    } catch (error) {
+      console.error("Error generating days:", error);
+      toast.error("Có lỗi xảy ra khi tạo buổi tập");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const AdminAddUserDialog = ({ dayIndex }) => {
+    const [selectedUser, setSelectedUser] = useState("");
+    const [participantCount, setParticipantCount] = useState("1");
+    const [isOpen, setIsOpen] = useState(false);
+
+    const nonParticipatingMembers = members.filter(
+      (member) => !days[dayIndex].members.includes(member.id)
+    );
+
+    const handleAddUser = async () => {
+      if (!selectedUser) {
+        toast.error("Vui lòng chọn thành viên");
+        return;
+      }
+
+      await handleToggleParticipation(
+        dayIndex,
+        parseInt(participantCount),
+        selectedUser
+      );
+      setIsOpen(false);
+    };
+
+    return (
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full border-badminton text-badminton hover:bg-badminton/10"
+          >
+            <UserPlus className="h-4 w-4 mr-1" /> Thêm người tham gia
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Thêm người tham gia</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Chọn thành viên</Label>
+              <Select
+                value={selectedUser}
+                onValueChange={(value) => setSelectedUser(value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn thành viên" />
+                </SelectTrigger>
+                <SelectContent>
+                  {nonParticipatingMembers.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Số lượng người</Label>
+              <input
+                type="number"
+                min="1"
+                value={participantCount}
+                onChange={(e) => setParticipantCount(e.target.value)}
+                className="w-full h-9 px-3 border rounded-md"
+              />
+            </div>
+            <Button
+              className="w-full bg-badminton hover:bg-badminton/90"
+              onClick={handleAddUser}
+            >
+              Thêm
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   useEffect(() => {
     const coreMembers = members
       .filter((member) => member.isCore)
@@ -341,11 +452,9 @@ const Calendar: React.FC<CalendarProps> = ({
 
     let needsUpdate = false;
     const updatedDays = days.map((day) => {
-      // Only auto-add core members if they haven't explicitly canceled
       const missingCoreMembers = coreMembers.filter(
         (id) =>
           !day.members.includes(id) &&
-          // Check if user hasn't manually removed themselves
           !day._removedCoreMembers?.includes(id)
       );
 
@@ -388,7 +497,6 @@ const Calendar: React.FC<CalendarProps> = ({
     return `Tháng ${month}`;
   };
 
-  // Add helper function to check if all members have paid
   const isAllMembersPaid = (day: CalendarDay): boolean => {
     if (day.members.length === 0) return false;
     if (!isPastDay(day.date)) return false;
@@ -425,32 +533,6 @@ const Calendar: React.FC<CalendarProps> = ({
     } catch (error) {
       console.error("Error updating day status:", error);
       toast.error("Có lỗi xảy ra khi hủy buổi tập");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerateDays = async () => {
-    if (!isAdmin) {
-      toast.error("Bạn không có quyền tạo buổi tập");
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const generatedDays = await generateBadmintonDays(
-        currentYear,
-        currentMonth
-      );
-      if (generatedDays.length > 0) {
-        toast.success("Đã tạo buổi tập thành công");
-        refreshData();
-      } else {
-        toast.error("Không thể tạo buổi tập");
-      }
-    } catch (error) {
-      console.error("Error generating days:", error);
-      toast.error("Có lỗi xảy ra khi tạo buổi tập");
     } finally {
       setLoading(false);
     }
@@ -648,32 +730,50 @@ const Calendar: React.FC<CalendarProps> = ({
                         <TooltipProvider key={memberId}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <div className="relative">
-                                <ClickableAvatar
-                                  name={member.name}
-                                  imageUrl={member.avatarUrl}
-                                  size="sm"
-                                  className={isPaid ? "opacity-50" : ""}
-                                />
-                                {participantCount > 1 && (
-                                  <Badge
-                                    className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
-                                    variant="default"
-                                  >
-                                    {participantCount}
-                                  </Badge>
+                              <div
+                                className={`flex items-center ${
+                                  isMobile ? "" : "gap-2 bg-gray-100 rounded-lg p-2"
+                                }`}
+                              >
+                                <div className="relative">
+                                  <ClickableAvatar
+                                    name={member.name}
+                                    imageUrl={member.avatarUrl}
+                                    size="sm"
+                                    className={isPaid ? "opacity-50" : ""}
+                                  />
+                                  {participantCount > 1 && (
+                                    <Badge
+                                      className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
+                                      variant="default"
+                                    >
+                                      {participantCount}
+                                    </Badge>
+                                  )}
+                                </div>
+                                {!isMobile && (
+                                  <div className="flex flex-col">
+                                    <span className="text-sm font-medium">
+                                      {member.name}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {isPaid ? "Đã thanh toán" : "Chưa thanh toán"}
+                                    </span>
+                                  </div>
                                 )}
                               </div>
                             </TooltipTrigger>
-                            <TooltipContent>
-                              <p className="text-xs">
-                                {member.name}
-                                {participantCount > 1
-                                  ? ` (${participantCount} người)`
-                                  : ""}
-                                {isPaid ? " - Đã thanh toán" : ""}
-                              </p>
-                            </TooltipContent>
+                            {isMobile && (
+                              <TooltipContent>
+                                <p className="text-xs">
+                                  {member.name}
+                                  {participantCount > 1
+                                    ? ` (${participantCount} người)`
+                                    : ""}
+                                  {isPaid ? " - Đã thanh toán" : ""}
+                                </p>
+                              </TooltipContent>
+                            )}
                           </Tooltip>
                         </TooltipProvider>
                       );
@@ -806,6 +906,12 @@ const Calendar: React.FC<CalendarProps> = ({
                           )}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {profile?.is_admin && (
+                    <div className="mt-3">
+                      <AdminAddUserDialog dayIndex={dayIndex} />
                     </div>
                   )}
 

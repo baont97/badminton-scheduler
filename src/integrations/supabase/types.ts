@@ -4,351 +4,362 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
 export type Database = {
   public: {
     Tables: {
       badminton_days: {
         Row: {
-          created_at: string;
-          created_by: string | null;
-          date: string;
-          day_of_week: number;
-          id: string;
-          is_active: boolean;
-          max_members: number;
-          session_cost: number;
-          session_time: string;
-        };
+          created_at: string
+          created_by: string | null
+          date: string
+          day_of_week: number
+          id: string
+          is_active: boolean
+          max_members: number
+          session_cost: number
+          session_time: string
+        }
         Insert: {
-          created_at?: string;
-          created_by?: string | null;
-          date: string;
-          day_of_week: number;
-          id?: string;
-          is_active?: boolean;
-          max_members?: number;
-          session_cost?: number;
-          session_time?: string;
-        };
+          created_at?: string
+          created_by?: string | null
+          date: string
+          day_of_week: number
+          id?: string
+          is_active?: boolean
+          max_members?: number
+          session_cost?: number
+          session_time?: string
+        }
         Update: {
-          created_at?: string;
-          created_by?: string | null;
-          date?: string;
-          day_of_week?: number;
-          id?: string;
-          is_active?: boolean;
-          max_members?: number;
-          session_cost?: number;
-          session_time?: string;
-        };
-        Relationships: [];
-      };
+          created_at?: string
+          created_by?: string | null
+          date?: string
+          day_of_week?: number
+          id?: string
+          is_active?: boolean
+          max_members?: number
+          session_cost?: number
+          session_time?: string
+        }
+        Relationships: []
+      }
       badminton_participants: {
         Row: {
-          created_at: string | null;
-          day_id: string;
-          has_paid: boolean;
-          id: string;
-          slot: number | null;
-          user_id: string;
-        };
+          created_at: string | null
+          day_id: string
+          has_paid: boolean
+          id: string
+          slot: number | null
+          user_id: string
+        }
         Insert: {
-          created_at?: string | null;
-          day_id: string;
-          has_paid?: boolean;
-          id?: string;
-          slot?: number | null;
-          user_id: string;
-        };
+          created_at?: string | null
+          day_id: string
+          has_paid?: boolean
+          id?: string
+          slot?: number | null
+          user_id: string
+        }
         Update: {
-          created_at?: string | null;
-          day_id?: string;
-          has_paid?: boolean;
-          id?: string;
-          slot?: number | null;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
+          created_at?: string | null
+          day_id?: string
+          has_paid?: boolean
+          id?: string
+          slot?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       badminton_settings: {
         Row: {
-          id: string;
-          max_members: number;
-          play_days: number[];
-          play_time: string;
-          session_price: number;
-          updated_at: string;
-          updated_by: string | null;
-        };
+          id: string
+          max_members: number
+          play_days: number[]
+          play_time: string
+          session_price: number
+          updated_at: string
+          updated_by: string | null
+        }
         Insert: {
-          id?: string;
-          max_members?: number;
-          play_days?: number[];
-          play_time?: string;
-          session_price?: number;
-          updated_at?: string;
-          updated_by?: string | null;
-        };
+          id?: string
+          max_members?: number
+          play_days?: number[]
+          play_time?: string
+          session_price?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
         Update: {
-          id?: string;
-          max_members?: number;
-          play_days?: number[];
-          play_time?: string;
-          session_price?: number;
-          updated_at?: string;
-          updated_by?: string | null;
-        };
-        Relationships: [];
-      };
+          id?: string
+          max_members?: number
+          play_days?: number[]
+          play_time?: string
+          session_price?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       core_member_opt_outs: {
         Row: {
-          id: string;
-          day_id: string;
-          user_id: string;
-          created_at: string;
-        };
+          created_at: string
+          day_id: string
+          id: string
+          user_id: string
+        }
         Insert: {
-          id?: string;
-          day_id: string;
-          user_id: string;
-          created_at?: string;
-        };
+          created_at?: string
+          day_id: string
+          id?: string
+          user_id: string
+        }
         Update: {
-          id?: string;
-          day_id?: string;
-          user_id?: string;
-          created_at?: string;
-        };
+          created_at?: string
+          day_id?: string
+          id?: string
+          user_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "core_member_opt_outs_day_id_fkey";
-            columns: ["day_id"];
-            isOneToOne: false;
-            referencedRelation: "badminton_days";
-            referencedColumns: ["id"];
+            foreignKeyName: "core_member_opt_outs_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "badminton_days"
+            referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "core_member_opt_outs_user_id_fkey";
-            columns: ["user_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
+            foreignKeyName: "core_member_opt_outs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       core_members: {
         Row: {
-          created_at: string | null;
-          id: string;
-          user_id: string;
-        };
+          created_at: string | null
+          id: string
+          user_id: string
+        }
         Insert: {
-          created_at?: string | null;
-          id?: string;
-          user_id: string;
-        };
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
         Update: {
-          created_at?: string | null;
-          id?: string;
-          user_id?: string;
-        };
-        Relationships: [];
-      };
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       extra_expenses: {
         Row: {
-          amount: number;
-          created_at: string;
-          day_id: string;
-          description: string | null;
-          id: string;
-          user_id: string;
-        };
+          amount: number
+          created_at: string
+          day_id: string
+          description: string | null
+          id: string
+          user_id: string
+        }
         Insert: {
-          amount: number;
-          created_at?: string;
-          day_id: string;
-          description?: string | null;
-          id?: string;
-          user_id: string;
-        };
+          amount: number
+          created_at?: string
+          day_id: string
+          description?: string | null
+          id?: string
+          user_id: string
+        }
         Update: {
-          amount?: number;
-          created_at?: string;
-          day_id?: string;
-          description?: string | null;
-          id?: string;
-          user_id?: string;
-        };
+          amount?: number
+          created_at?: string
+          day_id?: string
+          description?: string | null
+          id?: string
+          user_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "extra_expenses_day_id_fkey";
-            columns: ["day_id"];
-            isOneToOne: false;
-            referencedRelation: "badminton_days";
-            referencedColumns: ["id"];
-          }
-        ];
-      };
+            foreignKeyName: "extra_expenses_day_id_fkey"
+            columns: ["day_id"]
+            isOneToOne: false
+            referencedRelation: "badminton_days"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
-          avatar_url: string | null;
-          created_at: string | null;
-          id: string;
-          is_admin: boolean | null;
-          user_name: string | null;
-        };
+          avatar_url: string | null
+          created_at: string | null
+          id: string
+          is_admin: boolean | null
+          user_name: string | null
+        }
         Insert: {
-          avatar_url?: string | null;
-          created_at?: string | null;
-          id: string;
-          is_admin?: boolean | null;
-          user_name?: string | null;
-        };
+          avatar_url?: string | null
+          created_at?: string | null
+          id: string
+          is_admin?: boolean | null
+          user_name?: string | null
+        }
         Update: {
-          avatar_url?: string | null;
-          created_at?: string | null;
-          id?: string;
-          is_admin?: boolean | null;
-          user_name?: string | null;
-        };
-        Relationships: [];
-      };
-    };
+          avatar_url?: string | null
+          created_at?: string | null
+          id?: string
+          is_admin?: boolean | null
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
       generate_badminton_days: {
-        Args: {
-          _year: number;
-          _month: number;
-        };
+        Args: { _year: number; _month: number }
         Returns: {
-          created_at: string;
-          created_by: string | null;
-          date: string;
-          day_of_week: number;
-          id: string;
-          is_active: boolean;
-          max_members: number;
-          session_cost: number;
-          session_time: string;
-        }[];
-      };
+          created_at: string
+          created_by: string | null
+          date: string
+          day_of_week: number
+          id: string
+          is_active: boolean
+          max_members: number
+          session_cost: number
+          session_time: string
+        }[]
+      }
       update_badminton_settings: {
         Args: {
-          _session_price: number;
-          _max_members: number;
-          _play_days: number[];
-          _play_time: string;
-        };
-        Returns: boolean;
-      };
-    };
+          _session_price: number
+          _max_members: number
+          _play_days: number[]
+          _play_time: string
+        }
+        Returns: boolean
+      }
+    }
     Enums: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
+      [_ in never]: never
+    }
+  }
+}
 
-type PublicSchema = Database[Extract<keyof Database, "public">];
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
-  PublicTableNameOrOptions extends
-    | keyof (PublicSchema["Tables"] & PublicSchema["Views"])
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-        Database[PublicTableNameOrOptions["schema"]]["Views"])
-    : never = never
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
-      Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
     }
     ? R
     : never
-  : PublicTableNameOrOptions extends keyof (PublicSchema["Tables"] &
-      PublicSchema["Views"])
-  ? (PublicSchema["Tables"] &
-      PublicSchema["Views"])[PublicTableNameOrOptions] extends {
-      Row: infer R;
-    }
-    ? R
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
     : never
-  : never;
 
 export type TablesInsert<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
     }
     ? I
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
-      Insert: infer I;
-    }
-    ? I
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
     : never
-  : never;
 
 export type TablesUpdate<
-  PublicTableNameOrOptions extends
-    | keyof PublicSchema["Tables"]
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
     | { schema: keyof Database },
-  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicTableNameOrOptions["schema"]]["Tables"]
-    : never = never
-> = PublicTableNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
     }
     ? U
     : never
-  : PublicTableNameOrOptions extends keyof PublicSchema["Tables"]
-  ? PublicSchema["Tables"][PublicTableNameOrOptions] extends {
-      Update: infer U;
-    }
-    ? U
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
     : never
-  : never;
 
 export type Enums<
-  PublicEnumNameOrOptions extends
-    | keyof PublicSchema["Enums"]
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
     | { schema: keyof Database },
-  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
-    ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
-    : never = never
-> = PublicEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
-  ? PublicSchema["Enums"][PublicEnumNameOrOptions]
-  : never;
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof Database
+  }
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof PublicSchema["CompositeTypes"]
+    | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof Database },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database;
+    schema: keyof Database
   }
     ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof PublicSchema["CompositeTypes"]
-  ? PublicSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-  : never;
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {},
+  },
+} as const
