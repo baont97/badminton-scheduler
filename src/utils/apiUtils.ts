@@ -110,8 +110,13 @@ export async function toggleParticipation(
   slot: number
 ): Promise<boolean> {
   try {
-    console.log("toggleParticipation called with:", { dayId, userId, isParticipating, slot });
-    
+    console.log("toggleParticipation called with:", {
+      dayId,
+      userId,
+      isParticipating,
+      slot,
+    });
+
     if (isParticipating) {
       // Remove participation
       const { error } = await supabase
@@ -133,8 +138,13 @@ export async function toggleParticipation(
       return true;
     } else {
       // Add participation
-      console.log("Adding participation:", { day_id: dayId, user_id: userId, has_paid: false, slot });
-      
+      console.log("Adding participation:", {
+        day_id: dayId,
+        user_id: userId,
+        has_paid: false,
+        slot,
+      });
+
       const { error } = await supabase.from("badminton_participants").insert({
         day_id: dayId,
         user_id: userId,
@@ -242,7 +252,7 @@ export async function generateBadmintonDays(year: number, month: number) {
 
     // Create a map of existing days by date
     const existingDaysMap = new Map(
-      existingDays?.map(day => [day.date, day]) || []
+      existingDays?.map((day) => [day.date, day]) || []
     );
 
     // Generate new days
@@ -259,7 +269,7 @@ export async function generateBadmintonDays(year: number, month: number) {
       if (existingDay) {
         return {
           ...day,
-          is_active: existingDay.is_active
+          is_active: existingDay.is_active,
         };
       }
       return day;
@@ -268,7 +278,7 @@ export async function generateBadmintonDays(year: number, month: number) {
     // Update the days with preserved status
     const { error: updateError } = await supabase
       .from("badminton_days")
-      .upsert(updatedDays, { onConflict: 'date' });
+      .upsert(updatedDays, { onConflict: "date" });
 
     if (updateError) throw updateError;
 
@@ -584,5 +594,95 @@ export async function deleteBadmintonDay(dayId: string): Promise<boolean> {
   } catch (error) {
     console.error("Error soft deleting badminton day:", error);
     return false;
+  }
+}
+
+// Add this to your src/utils/apiUtils.ts file
+
+/**
+ * Fetch payment status for a specific day and user
+ */
+export async function fetchUserPaymentStatus(
+  dayId: string,
+  userId: string
+): Promise<boolean> {
+  try {
+    // First check badminton_participants
+    const { data: participantData, error: participantError } = await supabase
+      .from("badminton_participants")
+      .select("has_paid")
+      .eq("day_id", dayId)
+      .eq("user_id", userId)
+      .single();
+
+    if (participantError) {
+      console.error(
+        "Error fetching participant payment status:",
+        participantError
+      );
+      return false;
+    }
+
+    return participantData?.has_paid || false;
+  } catch (error) {
+    console.error("Error in fetchUserPaymentStatus:", error);
+    return false;
+  }
+}
+
+/**
+ * Sync payments with database for a specific day
+ * This is useful to refresh payment data after a MoMo payment
+ */
+export async function syncPaymentsForDay(
+  dayId: string
+): Promise<CalendarDay | null> {
+  try {
+    // Fetch the latest data for this day
+    const { data: dayData, error: dayError } = await supabase
+      .from("badminton_days")
+      .select("*")
+      .eq("id", dayId)
+      .single();
+
+    if (dayError || !dayData) {
+      console.error("Error fetching day data:", dayError);
+      return null;
+    }
+
+    // Fetch participants with payment status
+    const { data: participants, error: participantsError } = await supabase
+      .from("badminton_participants")
+      .select("user_id, has_paid, slot")
+      .eq("day_id", dayId);
+
+    if (participantsError) {
+      console.error("Error fetching participants:", participantsError);
+      return null;
+    }
+
+    // Fetch extra expenses
+    const extraExpenses = await fetchExtraExpenses(dayId);
+
+    // Create updated CalendarDay object
+    const updatedDay: CalendarDay = {
+      id: dayData.id,
+      date: dayData.date,
+      dayOfWeek: dayData.day_of_week,
+      isActive: dayData.is_active,
+      members: participants.map((p) => p.user_id),
+      paidMembers: participants.filter((p) => p.has_paid).map((p) => p.user_id),
+      slots: participants.map((p) => [p.user_id, p.slot || 1]),
+      maxMembers: dayData.max_members,
+      sessionCost: dayData.session_cost,
+      sessionTime: dayData.session_time,
+      extraExpenses: extraExpenses,
+      _removedCoreMembers: [], // This might need to be fetched separately if needed
+    };
+
+    return updatedDay;
+  } catch (error) {
+    console.error("Error in syncPaymentsForDay:", error);
+    return null;
   }
 }

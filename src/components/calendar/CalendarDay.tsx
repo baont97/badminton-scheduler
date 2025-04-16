@@ -27,6 +27,7 @@ import {
   markPaymentStatus,
 } from "@/utils/apiUtils";
 import { toast } from "sonner";
+import MomoPaymentButton from "@/components/MomoPaymentButton";
 
 interface CalendarDayProps {
   day: CalendarDayType;
@@ -305,25 +306,38 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
           <div className="flex justify-end gap-2">
             {isParticipating ? (
               <>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className={`${
-                    hasPaid
-                      ? "border-green-500 text-green-500 hover:bg-green-50"
-                      : "border-badminton text-badminton hover:bg-badminton/10"
-                  }`}
-                  onClick={handleTogglePaymentStatus}
-                  disabled={
-                    loading || members.find((m) => m.id === user.id)?.isCore
-                  }
-                >
-                  {hasPaid ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <CreditCard className="h-4 w-4" />
-                  )}
-                </Button>
+                {!members.find((m) => m.id === user.id)?.isCore && (
+                  <>
+                    {/* Manual payment button */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className={`${
+                        hasPaid
+                          ? "border-green-500 text-green-500 hover:bg-green-50"
+                          : "border-badminton text-badminton hover:bg-badminton/10"
+                      }`}
+                      onClick={() => handleTogglePaymentStatus()}
+                      disabled={loading}
+                    >
+                      {hasPaid ? (
+                        <Check className="h-4 w-4" />
+                      ) : (
+                        <CreditCard className="h-4 w-4" />
+                      )}
+                    </Button>
+
+                    {/* MoMo payment button - only show if not paid */}
+                    {!hasPaid && (
+                      <MomoPaymentButton
+                        dayId={day.id}
+                        date={day.date}
+                        sessionCost={calculatePaymentAmount(day, user.id)}
+                        disabled={loading}
+                      />
+                    )}
+                  </>
+                )}
 
                 {(!isPast || isAdmin) && (
                   <Button

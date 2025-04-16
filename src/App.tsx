@@ -13,6 +13,7 @@ import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import Admin from "./pages/Admin";
 import NotFound from "./pages/NotFound";
+import PaymentResult from "./pages/PaymentResult";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -65,6 +66,18 @@ const App = () => (
                     <Header />
                     <SalesBanner />
                     <Admin />
+                  </>
+                </ProtectedRoute>
+              }
+            />
+            {/* Add the payment result route */}
+            <Route
+              path="/payment-result"
+              element={
+                <ProtectedRoute>
+                  <>
+                    <Header />
+                    <PaymentResult />
                   </>
                 </ProtectedRoute>
               }
