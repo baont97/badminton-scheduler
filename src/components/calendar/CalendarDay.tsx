@@ -1,5 +1,5 @@
 // src/components/Calendar/CalendarDay.tsx
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { X, UserPlus, Receipt, Ban } from "lucide-react";
 import {
@@ -28,6 +28,16 @@ import {
 } from "@/utils/apiUtils";
 import { toast } from "sonner";
 import MomoPaymentButton from "@/components/MomoPaymentButton";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 interface CalendarDayProps {
   day: CalendarDayType;
   dayIndex: number;
@@ -52,6 +62,8 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
   const isPast = isPastDay(day.date);
   const isDisabled = !day.isActive;
   const totalParticipants = getTotalParticipantsInDay(day);
+  const [participantCount, setParticipantCount] = useState("1");
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 
   const handleToggleParticipation = async (
     participantCount: number = 1,
@@ -211,7 +223,6 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
   };
 
   const handlePaymentSuccess = () => {
-    // Cập nhật trạng thái ngày khi thanh toán thành công
     if (user) {
       const updatedDay = {
         ...day,
@@ -220,6 +231,22 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
 
       onUpdateDay(updatedDay);
     }
+  };
+
+  const handleJoinClick = () => {
+    setParticipantCount("1");
+    setJoinDialogOpen(true);
+  };
+
+  const handleConfirmJoin = async () => {
+    const count = parseInt(participantCount, 10);
+    if (isNaN(count) || count < 1) {
+      toast.error("Số lượng không hợp lệ");
+      return;
+    }
+    
+    await handleToggleParticipation(count);
+    setJoinDialogOpen(false);
   };
 
   return (
@@ -331,20 +358,49 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
               </>
             ) : (
               !isPast && (
-                <Button
-                  size="icon"
-                  className={`${
-                    day.isActive
-                      ? "bg-badminton hover:bg-badminton/80"
-                      : "bg-gray-400 hover:bg-gray-500"
-                  }`}
-                  onClick={() => handleToggleParticipation(1)}
-                  disabled={
-                    loading || isDisabled || totalParticipants >= day.maxMembers
-                  }
-                >
-                  <UserPlus className="h-4 w-4" />
-                </Button>
+                <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button
+                      size="icon"
+                      className={`${
+                        day.isActive
+                          ? "bg-badminton hover:bg-badminton/80"
+                          : "bg-gray-400 hover:bg-gray-500"
+                      }`}
+                      onClick={handleJoinClick}
+                      disabled={
+                        loading || isDisabled || totalParticipants >= day.maxMembers
+                      }
+                    >
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Tham gia ngày {formatDate(day.date)}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="participants">Số lượng người tham gia</Label>
+                        <Input
+                          id="participants"
+                          type="number"
+                          min="1"
+                          max={day.maxMembers - totalParticipants}
+                          value={participantCount}
+                          onChange={(e) => setParticipantCount(e.target.value)}
+                        />
+                      </div>
+                      <Button 
+                        className="w-full bg-badminton hover:bg-badminton/90"
+                        onClick={handleConfirmJoin}
+                        disabled={loading}
+                      >
+                        Xác nhận
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               )
             )}
 

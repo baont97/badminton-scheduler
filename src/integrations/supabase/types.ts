@@ -191,6 +191,65 @@ export type Database = {
           },
         ]
       }
+      momo_transactions: {
+        Row: {
+          amount: number
+          badminton_participant_id: string | null
+          created_at: string | null
+          id: string
+          is_processed: boolean | null
+          is_verified: boolean | null
+          momo_trans_id: string | null
+          order_id: string
+          partner_code: string
+          payment_status: string | null
+          processed_at: string | null
+          processing_started_at: string | null
+          request_id: string
+          signature: string | null
+        }
+        Insert: {
+          amount: number
+          badminton_participant_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_processed?: boolean | null
+          is_verified?: boolean | null
+          momo_trans_id?: string | null
+          order_id: string
+          partner_code: string
+          payment_status?: string | null
+          processed_at?: string | null
+          processing_started_at?: string | null
+          request_id: string
+          signature?: string | null
+        }
+        Update: {
+          amount?: number
+          badminton_participant_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_processed?: boolean | null
+          is_verified?: boolean | null
+          momo_trans_id?: string | null
+          order_id?: string
+          partner_code?: string
+          payment_status?: string | null
+          processed_at?: string | null
+          processing_started_at?: string | null
+          request_id?: string
+          signature?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "momo_transactions_badminton_participant_id_fkey"
+            columns: ["badminton_participant_id"]
+            isOneToOne: false
+            referencedRelation: "badminton_participants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -232,6 +291,25 @@ export type Database = {
           max_members: number
           session_cost: number
           session_time: string
+        }[]
+      }
+      start_processing_transaction: {
+        Args: { p_order_id: string }
+        Returns: {
+          amount: number
+          badminton_participant_id: string | null
+          created_at: string | null
+          id: string
+          is_processed: boolean | null
+          is_verified: boolean | null
+          momo_trans_id: string | null
+          order_id: string
+          partner_code: string
+          payment_status: string | null
+          processed_at: string | null
+          processing_started_at: string | null
+          request_id: string
+          signature: string | null
         }[]
       }
       update_badminton_settings: {
