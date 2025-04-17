@@ -7,7 +7,7 @@ import { AlertTriangle, Settings, Users, UserPlus } from "lucide-react";
 import CreateUserForm from "@/components/admin/CreateUserForm";
 import UserManagement from "@/components/admin/UserManagement";
 import BadmintonSettings from "@/components/admin/BadmintonSettings";
-import { fetchUsers } from "@/utils/apiUtils";
+import { fetchUsers } from "@/utils/api";
 
 const Admin = () => {
   const [users, setUsers] = useState([]);

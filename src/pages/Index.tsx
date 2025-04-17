@@ -1,3 +1,4 @@
+
 // src/pages/Index.tsx
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -5,7 +6,7 @@ import Calendar from "@/components/calendar";
 import MemberList from "@/components/MemberList";
 import StatisticsTable from "@/components/StatisticsTable";
 import { Member, CalendarDay } from "@/utils/schedulerUtils";
-import { fetchUsers, fetchBadmintonDays } from "@/utils/apiUtils";
+import { fetchUsers, fetchBadmintonDays } from "@/utils/api";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useLocation } from "react-router-dom";
