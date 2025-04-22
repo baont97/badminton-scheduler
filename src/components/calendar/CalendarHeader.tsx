@@ -1,5 +1,5 @@
 // src/components/Calendar/CalendarHeader.tsx
-import React from "react";
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -35,6 +35,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         <button
           onClick={refreshData}
           className="hover:rotate-180 transition-transform duration-300"
+          aria-label="Refresh calendar data"
         >
           <RefreshCw className="w-5 h-5" />
         </button>
