@@ -1,11 +1,21 @@
 
-import { ExtraExpense } from "./apiUtils";
+// Update the import for ExtraExpense type
 
 export interface Member {
   id: string;
   name: string;
   isCore: boolean;
   avatarUrl: string | null;
+}
+
+export interface ExtraExpense {
+  id: string;
+  dayId: string;
+  userId: string;
+  userName: string;
+  amount: number;
+  description: string;
+  createdAt: string;
 }
 
 export interface CalendarDay {
