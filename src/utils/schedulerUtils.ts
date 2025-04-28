@@ -30,6 +30,7 @@ export interface CalendarDay {
   sessionCost: number;
   sessionTime: string;
   extraExpenses: ExtraExpense[];
+  can_pay: boolean;
   _removedCoreMembers?: string[];
 }
 

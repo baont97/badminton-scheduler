@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDay } from "../schedulerUtils";
 import { fetchDayParticipants } from "./participantApi";
@@ -112,6 +113,7 @@ export async function fetchBadmintonDays(
           sessionCost: day.session_cost,
           sessionTime: day.session_time,
           extraExpenses: expenses,
+          can_pay: day.can_pay,
           _removedCoreMembers: optOutsByDay[day.id] || [],
         };
       })
