@@ -74,6 +74,7 @@ export async function syncPaymentsForDay(
       sessionCost: dayData.session_cost,
       sessionTime: dayData.session_time,
       extraExpenses: extraExpenses,
+      can_pay: dayData.can_pay, // Added the can_pay property from the database
       _removedCoreMembers: [], // This might need to be fetched separately if needed
     };
 
