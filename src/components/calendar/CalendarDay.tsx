@@ -445,11 +445,11 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
       )}
 
       {profile?.is_admin && (
-        <div className="mt-3">
+        <div className="mt-3 space-y-2">
           <Button
             variant={day.can_pay ? "destructive" : "default"}
             size="sm"
-            className="w-full"
+            className="w-full py-2"
             onClick={handleTogglePaymentStatus}
             disabled={loading}
           >
