@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDay } from "../schedulerUtils";
 import { fetchDayParticipants } from "./participantApi";
@@ -137,6 +136,23 @@ export async function deleteBadmintonDay(dayId: string): Promise<boolean> {
     return true;
   } catch (error) {
     console.error("Error soft deleting badminton day:", error);
+    return false;
+  }
+}
+
+// Toggle day payment status
+export async function toggleDayPaymentStatus(dayId: string, canPay: boolean): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .rpc('toggle_day_payment_status', {
+        day_id_param: dayId,
+        can_pay_param: canPay,
+      });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error("Error toggling day payment status:", error);
     return false;
   }
 }

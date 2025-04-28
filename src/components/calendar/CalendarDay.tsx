@@ -25,6 +25,7 @@ import {
   deleteBadmintonDay,
   toggleParticipation,
   markPaymentStatus,
+  toggleDayPaymentStatus,
 } from "@/utils/apiUtils";
 import { toast } from "sonner";
 import MomoPaymentButton from "@/components/MomoPaymentButton";
@@ -162,38 +163,32 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
   };
 
   const handleTogglePaymentStatus = async () => {
-    if (!user) {
-      toast.error("Vui lòng đăng nhập để thanh toán");
+    if (!isAdmin) {
+      toast.error("Bạn không có quyền thay đổi trạng thái thanh toán");
       return;
     }
 
     setLoading(true);
 
-    const success = await markPaymentStatus(day.id, user.id, !hasPaid);
+    try {
+      const success = await toggleDayPaymentStatus(day.id, !day.can_pay);
 
-    if (success) {
-      let updatedDay;
-
-      if (hasPaid) {
-        updatedDay = {
+      if (success) {
+        const updatedDay = {
           ...day,
-          paidMembers: day.paidMembers.filter((id) => id !== user.id),
+          can_pay: !day.can_pay,
         };
-        toast.success("Đã hủy trạng thái thanh toán");
+        onUpdateDay(updatedDay);
+        toast.success(day.can_pay ? "Đã khóa thanh toán" : "Đã mở thanh toán");
       } else {
-        updatedDay = {
-          ...day,
-          paidMembers: [...day.paidMembers, user.id],
-        };
-        toast.success("Đã xác nhận thanh toán");
+        toast.error("Không thể thay đổi trạng thái thanh toán");
       }
-
-      onUpdateDay(updatedDay);
-    } else {
-      toast.error("Có lỗi xảy ra khi cập nhật trạng thái thanh toán");
+    } catch (error) {
+      console.error("Error toggling payment status:", error);
+      toast.error("Có lỗi xảy ra khi thay đổi trạng thái thanh toán");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   const handleToggleDayStatus = async () => {
@@ -414,7 +409,7 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
                       dayDate={formatDate(day.date)}
                       amount={calculatePaymentAmount(day, user?.id || "")}
                       onPaymentSuccess={handlePaymentSuccess}
-                      disabled={loading}
+                      disabled={loading || !day.can_pay}
                     />
                   )}
                 <Button
@@ -451,6 +446,15 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
 
       {profile?.is_admin && (
         <div className="mt-3">
+          <Button
+            variant={day.can_pay ? "destructive" : "default"}
+            size="sm"
+            className="w-full"
+            onClick={handleTogglePaymentStatus}
+            disabled={loading}
+          >
+            {day.can_pay ? "Khóa thanh toán" : "Mở thanh toán"}
+          </Button>
           <CalendarAdminActions
             day={day}
             members={members}

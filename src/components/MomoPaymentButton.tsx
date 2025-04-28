@@ -125,6 +125,7 @@ const MomoPaymentButton = ({
         className="border-badminton text-badminton hover:bg-badminton/10"
         onClick={handlePayment}
         disabled={loading || disabled}
+        title={disabled ? "Chờ admin mở thanh toán" : "Thanh toán qua MoMo"}
       >
         {loading ? (
           <span className="flex items-center">

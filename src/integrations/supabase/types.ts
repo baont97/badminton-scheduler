@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       badminton_days: {
         Row: {
+          can_pay: boolean
           created_at: string
           created_by: string | null
           date: string
@@ -22,6 +23,7 @@ export type Database = {
           session_time: string
         }
         Insert: {
+          can_pay?: boolean
           created_at?: string
           created_by?: string | null
           date: string
@@ -33,6 +35,7 @@ export type Database = {
           session_time?: string
         }
         Update: {
+          can_pay?: boolean
           created_at?: string
           created_by?: string | null
           date?: string
@@ -282,6 +285,7 @@ export type Database = {
       generate_badminton_days: {
         Args: { _year: number; _month: number }
         Returns: {
+          can_pay: boolean
           created_at: string
           created_by: string | null
           date: string
@@ -311,6 +315,10 @@ export type Database = {
           request_id: string
           signature: string | null
         }[]
+      }
+      toggle_day_payment_status: {
+        Args: { day_id_param: string; can_pay_param: boolean }
+        Returns: boolean
       }
       update_badminton_settings: {
         Args: {
