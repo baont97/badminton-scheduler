@@ -181,7 +181,7 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
         onUpdateDay(updatedDay);
         toast.success(day.can_pay ? "Đã khóa thanh toán" : "Đã mở thanh toán");
       } else {
-        toast.error("Không thể thay đổi trạng thái thanh toán");
+        toast.error("Không có quyền thay đổi trạng thái thanh toán");
       }
     } catch (error) {
       console.error("Error toggling payment status:", error);
