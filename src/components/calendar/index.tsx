@@ -73,7 +73,10 @@ const Calendar: React.FC<CalendarProps> = ({
       />
 
       {days.length === 0 ? (
-        <CalendarEmptyState onGenerateDays={() => {}} loading={loading} />
+        <CalendarEmptyState onGenerateDays={() => {
+          setLoading(true);
+          refreshData().finally(() => setLoading(false));
+        }} loading={loading} />
       ) : (
         <CalendarGrid
           days={days}

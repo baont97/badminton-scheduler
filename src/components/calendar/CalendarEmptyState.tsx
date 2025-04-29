@@ -1,9 +1,10 @@
+
 // src/components/Calendar/CalendarEmptyState.tsx
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { generateBadmintonDays } from "@/utils/apiUtils";
+import { generateBadmintonDays } from "@/utils/api/dayApi";
 import { toast } from "sonner";
 
 interface CalendarEmptyStateProps {

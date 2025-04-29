@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -45,9 +44,7 @@ import {
   deleteLocation,
   fetchDaySettings,
   deleteDaySetting
-} from "@/utils/apiUtils";
-import LocationForm from "./LocationForm";
-import DaySettingForm from "./DaySettingForm";
+} from "@/utils/api";
 
 const settingsSchema = z.object({
   sessionPrice: z.string().regex(/^\d+$/, "Vui lòng nhập số"),
