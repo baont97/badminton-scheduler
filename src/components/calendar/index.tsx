@@ -14,7 +14,7 @@ interface CalendarProps {
   currentMonth: number;
   currentYear: number;
   onChangeMonth: (month: number, year: number) => void;
-  refreshData: () => void;
+  refreshData: () => Promise<void>; // Updated type to show it returns a Promise
 }
 
 const Calendar: React.FC<CalendarProps> = ({

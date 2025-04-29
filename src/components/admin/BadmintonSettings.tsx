@@ -45,6 +45,8 @@ import {
   fetchDaySettings,
   deleteDaySetting
 } from "@/utils/api";
+import LocationForm from "./LocationForm";
+import DaySettingForm from "./DaySettingForm";
 
 const settingsSchema = z.object({
   sessionPrice: z.string().regex(/^\d+$/, "Vui lòng nhập số"),
