@@ -157,7 +157,7 @@ const BadmintonSettings = () => {
         toast.success("Cài đặt đã được lưu", {
           description: "Thay đổi sẽ được áp dụng cho các buổi tập sắp tới"
         });
-        await generateCurrentMonthDays();
+        await regenerateCurrentMonthDays();
       } else {
         toast.error("Có lỗi xảy ra khi lưu cài đặt");
       }
@@ -442,7 +442,7 @@ const BadmintonSettings = () => {
               </div>
               <Button size="sm" onClick={async () => {
                 try {
-                  await generateCurrentMonthDays();
+                  await regenerateCurrentMonthDays();
                   toast.success("Đã tạo lịch cho tháng hiện tại");
                 } catch (error) {
                   toast.error("Có lỗi xảy ra khi tạo lịch");
