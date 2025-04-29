@@ -1,3 +1,4 @@
+
 // src/components/Calendar/CalendarAdminActions.tsx
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -22,14 +23,18 @@ import {
 
 interface CalendarAdminActionsProps {
   day: CalendarDay;
-  members: Member[];
-  onAddUser: (participantCount: number, userId: string) => Promise<void>;
+  members?: Member[];
+  onAddUser?: (participantCount: number, userId: string) => Promise<void>;
+  onUpdateDay?: (day: CalendarDay) => void;
+  setLoading?: (loading: boolean) => void;
 }
 
 export const CalendarAdminActions: React.FC<CalendarAdminActionsProps> = ({
   day,
-  members,
+  members = [],
   onAddUser,
+  onUpdateDay,
+  setLoading,
 }) => {
   const [selectedUser, setSelectedUser] = useState("");
   const [participantCount, setParticipantCount] = useState("1");
@@ -40,7 +45,7 @@ export const CalendarAdminActions: React.FC<CalendarAdminActionsProps> = ({
   );
 
   const handleAddUser = async () => {
-    if (!selectedUser) {
+    if (!selectedUser || !onAddUser) {
       return;
     }
 

@@ -208,19 +208,5 @@ export async function generateCurrentMonthDays() {
   return generateBadmintonDays(date.getFullYear(), date.getMonth() + 1);
 }
 
-// Generate badminton days for a specific month
-export async function generateBadmintonDays(year: number, month: number) {
-  try {
-    const { data, error } = await supabase.rpc("generate_badminton_days", {
-      _year: year,
-      _month: month,
-    });
-
-    if (error) throw error;
-
-    return data;
-  } catch (error) {
-    console.error("Error generating badminton days:", error);
-    return [];
-  }
-}
+// I've removed the duplicate export of generateBadmintonDays function from here
+// as it's already exported from dayApi.ts

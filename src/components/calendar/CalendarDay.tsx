@@ -1,3 +1,4 @@
+
 // src/components/calendar/CalendarDay.tsx
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -16,8 +17,11 @@ import {
   getParticipantCount,
   getTotalParticipantsInDay,
 } from "@/utils/schedulerUtils";
-import { toggleAttendance, togglePaymentStatus } from "@/utils/api";
+import { toggleDayPaymentStatus } from "@/utils/api";
 import { isWithinOneHourOfSession, useCalendarDayUser, getRemainingTime, isAfterGameTimeWithBuffer } from "./utils";
+
+// Import the correct toggleAttendance function
+import { toggleAttendance } from "@/utils/api/participantApi";
 
 interface CalendarDayProps {
   day: CalendarDay;
@@ -166,7 +170,6 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
             <CalendarDayParticipants
               day={day}
               members={members}
-              onUpdateDay={onUpdateDay}
             />
           </div>
         )}
@@ -180,7 +183,7 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
             size="sm"
             onClick={handleToggleAttendance}
             disabled={loadingAttendance}
-            className="flex-1"
+            // Remove duplicate className attribute
           >
             {loadingAttendance
               ? "Đang xử lý..."
@@ -204,8 +207,9 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
         {isAdmin && (
           <CalendarAdminActions
             day={day}
-            onUpdateDay={onUpdateDay}
+            members={members}
             setLoading={setLoading}
+            onUpdateDay={onUpdateDay}
           />
         )}
       </CardFooter>

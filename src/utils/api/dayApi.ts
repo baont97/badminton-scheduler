@@ -61,29 +61,49 @@ export async function fetchBadmintonDays(
   month: number
 ): Promise<CalendarDay[]> {
   try {
-    // Fetch the days along with location information
-    const { data, error } = await supabase
+    // Fetch the days first
+    const { data: daysData, error: daysError } = await supabase
       .from("badminton_days")
-      .select(`
-        *,
-        day_settings:day_of_week (
-          court_count,
-          location_id
-        ),
-        location:day_settings!inner(location_id(id, name, address))
-      `)
+      .select("*")
       .gte("date", `${year}-${month.toString().padStart(2, "0")}-01`)
       .lt("date", `${year}-${(month + 1).toString().padStart(2, "0")}-01`);
 
-    if (error) throw error;
+    if (daysError) throw daysError;
 
     // If no days exist, return empty array
-    if (!data || data.length === 0) {
+    if (!daysData || daysData.length === 0) {
       return [];
     }
 
+    // Get settings for each day
+    const dayIds = daysData.map(day => day.id);
+    const dayOfWeeks = Array.from(new Set(daysData.map(day => day.day_of_week)));
+
+    // Fetch day settings for these day_of_week values
+    const { data: daySettings, error: settingsError } = await supabase
+      .from("day_settings")
+      .select(`
+        *,
+        location:location_id(id, name, address)
+      `)
+      .in("day_of_week", dayOfWeeks);
+
+    if (settingsError) {
+      console.error("Error fetching day settings:", settingsError);
+    }
+
+    // Create a map of day settings by day_of_week
+    const daySettingsMap = new Map();
+    if (daySettings) {
+      daySettings.forEach(setting => {
+        daySettingsMap.set(setting.day_of_week, {
+          courtCount: setting.court_count || 1,
+          location: setting.location
+        });
+      });
+    }
+
     // Fetch all opt-outs for this month's days
-    const dayIds = data.map((day) => day.id);
     const { data: optOuts, error: optOutsError } = await supabase
       .from("core_member_opt_outs")
       .select("day_id, user_id")
@@ -92,7 +112,7 @@ export async function fetchBadmintonDays(
     if (optOutsError) console.error("Error fetching opt-outs:", optOutsError);
 
     // Group opt-outs by day_id
-    const optOutsByDay = {};
+    const optOutsByDay: {[key: string]: string[]} = {};
     if (optOuts) {
       optOuts.forEach((opt) => {
         if (!optOutsByDay[opt.day_id]) optOutsByDay[opt.day_id] = [];
@@ -102,19 +122,14 @@ export async function fetchBadmintonDays(
 
     // Convert to CalendarDay format
     const calendarDays: CalendarDay[] = await Promise.all(
-      data.map(async (day) => {
+      daysData.map(async (day) => {
         const participants = await fetchDayParticipants(day.id);
         const expenses = await fetchExtraExpenses(day.id);
 
-        // Extract location information
-        const location = day.location ? {
-          id: day.location.id,
-          name: day.location.name,
-          address: day.location.address,
-        } : null;
-
-        // Get court count from day settings or default to 1
-        const courtCount = day.day_settings?.court_count || 1;
+        // Get day settings from the map
+        const settings = daySettingsMap.get(day.day_of_week);
+        const location = settings?.location || null;
+        const courtCount = settings?.courtCount || 1;
 
         return {
           id: day.id,
