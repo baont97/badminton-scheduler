@@ -1,6 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
-import { generateCurrentMonthDays } from "@/utils/api/dayApi";
+import { generateBadmintonDays } from "@/utils/api/dayApi";
 
 // Fetch badminton settings
 export async function fetchBadmintonSettings() {
@@ -203,8 +203,8 @@ export async function deleteDaySetting(id: string) {
   }
 }
 
-// Generate days for the current month
-export async function generateCurrentMonthDays() {
+// Helper function to regenerate current month days
+export async function regenerateCurrentMonthDays() {
   const date = new Date();
-  return generateCurrentMonthDays();
+  return generateBadmintonDays(date.getFullYear(), date.getMonth() + 1);
 }

@@ -40,7 +40,7 @@ import { Separator } from "@/components/ui/separator";
 import {
   fetchBadmintonSettings,
   updateBadmintonSettings,
-  generateCurrentMonthDays,
+  regenerateCurrentMonthDays,
   fetchLocations,
   deleteLocation,
   fetchDaySettings,

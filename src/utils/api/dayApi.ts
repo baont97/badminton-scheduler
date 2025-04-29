@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDay } from "../schedulerUtils";
 import { fetchDayParticipants } from "./participantApi";
