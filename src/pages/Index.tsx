@@ -1,5 +1,4 @@
 
-// src/pages/Index.tsx
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Calendar from "@/components/calendar";
@@ -85,6 +84,17 @@ const Index = () => {
     setCurrentYear(year);
   };
 
+  // Create a wrapper function that matches the expected type
+  const refreshCalendarDataWrapper = async (): Promise<void> => {
+    try {
+      await refreshCalendarData();
+      return;
+    } catch (error) {
+      console.error("Error refreshing calendar data:", error);
+      throw error;
+    }
+  };
+
   const isLoading = usersLoading || calendarLoading;
 
   if (isLoading) {
@@ -129,7 +139,7 @@ const Index = () => {
             currentMonth={currentMonth}
             currentYear={currentYear}
             onChangeMonth={changeMonth}
-            refreshData={refreshCalendarData}
+            refreshData={refreshCalendarDataWrapper}
           />
         </div>
         <div>
