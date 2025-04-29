@@ -18,6 +18,12 @@ export interface ExtraExpense {
   createdAt: string;
 }
 
+export interface Location {
+  id: string;
+  name: string;
+  address?: string | null;
+}
+
 export interface CalendarDay {
   id: string;
   date: string;
@@ -32,6 +38,8 @@ export interface CalendarDay {
   extraExpenses: ExtraExpense[];
   can_pay: boolean;
   _removedCoreMembers?: string[];
+  location?: Location | null;
+  courtCount?: number;
 }
 
 export const getDayName = (dayOfWeek: number): string => {

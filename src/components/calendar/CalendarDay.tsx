@@ -1,50 +1,30 @@
-// src/components/Calendar/CalendarDay.tsx
+// src/components/calendar/CalendarDay.tsx
 import React, { useState } from "react";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { X, UserPlus, Receipt, Ban } from "lucide-react";
-import {
-  CalendarDay as CalendarDayType,
-  Member,
-  getDayName,
-  formatDate,
-  getParticipantCount,
-  getTotalParticipantsInDay,
-  formatCurrency,
-  calculatePaymentAmount,
-} from "@/utils/schedulerUtils";
-import {
-  isPastDay,
-  isWithinOneHourOfSession,
-  isAfterGameTimeWithBuffer,
-  useCalendarDayUser,
-} from "./utils";
+import { Badge } from "@/components/ui/badge";
+import { Calendar, Users, Clock, MapPin } from "lucide-react";
+import { toast } from "sonner";
 import { CalendarDayParticipants } from "./CalendarDayParticipants";
 import { CalendarAdminActions } from "./CalendarAdminActions";
-import ExtraExpenseForm from "@/components/ExtraExpenseForm";
 import {
-  deleteBadmintonDay,
-  toggleParticipation,
-  markPaymentStatus,
-  toggleDayPaymentStatus,
-} from "@/utils/apiUtils";
-import { toast } from "sonner";
-import MomoPaymentButton from "@/components/MomoPaymentButton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+  formatDate,
+  getDayName,
+  formatCurrency,
+  CalendarDay,
+  Member,
+  getParticipantCount,
+  getTotalParticipantsInDay,
+} from "@/utils/schedulerUtils";
+import { toggleAttendance, togglePaymentStatus } from "@/utils/api";
+import { isWithinOneHourOfSession, useCalendarDayUser, getRemainingTime, isAfterGameTimeWithBuffer } from "./utils";
 
 interface CalendarDayProps {
-  day: CalendarDayType;
+  day: CalendarDay;
   dayIndex: number;
   members: Member[];
-  onUpdateDay: (day: CalendarDayType) => void;
-  onOpenBill: (day: CalendarDayType) => void;
+  onUpdateDay: (day: CalendarDay) => void;
+  onOpenBill: (day: CalendarDay) => void;
   setLoading: (loading: boolean) => void;
   loading: boolean;
 }
@@ -58,410 +38,177 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
   setLoading,
   loading,
 }) => {
-  const { user, profile, isAdmin, isParticipating, hasPaid } =
-    useCalendarDayUser(day);
-  const isPast = isPastDay(day.date);
-  const isDisabled = !day.isActive;
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
+  const { user, profile, isAdmin, isParticipating, hasPaid } = useCalendarDayUser(day);
+  
+  const isPastGame = isAfterGameTimeWithBuffer(day.date, day.sessionTime);
+  const nearGameTime = isWithinOneHourOfSession(day);
+  const remainingTime = getRemainingTime(day);
+  const userCanJoin = day.isActive && user && (!isPastGame || isAdmin);
+  const participantSlotCount = getParticipantCount(day, user?.id || "");
   const totalParticipants = getTotalParticipantsInDay(day);
-  const [participantCount, setParticipantCount] = useState("1");
-  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 
-  const handleToggleParticipation = async (
-    participantCount: number = 1,
-    userId?: string
-  ) => {
-    if (!user && !userId) {
-      toast.error("Vui lòng đăng nhập để tham gia");
-      return;
-    }
-
-    const targetUserId = userId || user?.id;
-    if (!targetUserId) return;
-
-    const isMemberInDay = day.members.includes(targetUserId);
-    const isUserCoreMember = members.some(
-      (m) => m.id === targetUserId && m.isCore
-    );
-
-    if (!profile?.is_admin && isMemberInDay && isWithinOneHourOfSession(day)) {
-      toast.error(
-        "Không thể hủy tham gia trong vòng 1 tiếng trước giờ đánh cầu"
-      );
-      return;
-    }
-
-    const currentTotal = getTotalParticipantsInDay(day);
-    const userCurrentCount = isMemberInDay
-      ? getParticipantCount(day, targetUserId)
-      : 0;
-    const newTotal = isMemberInDay
-      ? currentTotal - userCurrentCount
-      : currentTotal + participantCount;
-
-    if (!isMemberInDay && newTotal > day.maxMembers) {
-      toast.error(`Đã đạt giới hạn ${day.maxMembers} người cho ngày này`);
-      return;
-    }
-
-    setLoading(true);
+  const handleToggleAttendance = async () => {
+    if (!user || loading) return;
 
     try {
-      const success = await toggleParticipation(
-        day.id,
-        targetUserId,
-        isMemberInDay,
-        participantCount
-      );
+      setLoadingAttendance(true);
 
-      if (success) {
-        let updatedDay = { ...day };
-
-        if (isMemberInDay) {
-          const removedCoreMembers = isUserCoreMember
-            ? [...(day._removedCoreMembers || []), targetUserId]
-            : day._removedCoreMembers;
-
-          updatedDay = {
-            ...day,
-            members: day.members.filter((id) => id !== targetUserId),
-            paidMembers: day.paidMembers.filter((id) => id !== targetUserId),
-            slots: day.slots.filter((s) => s[0] !== targetUserId),
-            _removedCoreMembers: removedCoreMembers,
-          };
-        } else {
-          let removedCoreMembers = day._removedCoreMembers;
-          if (isUserCoreMember && removedCoreMembers?.includes(targetUserId)) {
-            removedCoreMembers = removedCoreMembers.filter(
-              (id) => id !== targetUserId
-            );
-          }
-
-          updatedDay = {
-            ...day,
-            members: [...day.members, targetUserId],
-            slots: [...day.slots, [targetUserId, participantCount]],
-            _removedCoreMembers: removedCoreMembers,
-          };
-        }
-
-        onUpdateDay(updatedDay);
-        toast.success(
-          isMemberInDay
-            ? "Đã hủy tham gia thành công"
-            : "Đã tham gia thành công"
-        );
-      } else {
-        console.error("Failed to toggle participation");
-        toast.error("Có lỗi xảy ra khi cập nhật trạng thái tham gia");
-      }
-    } catch (error) {
-      console.error("Error toggling participation:", error);
-      toast.error("Có lỗi xảy ra khi cập nhật trạng thái tham gia");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleTogglePaymentStatus = async () => {
-    if (!isAdmin) {
-      toast.error("Bạn không có quyền thay đổi trạng thái thanh toán");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const success = await toggleDayPaymentStatus(day.id, !day.can_pay);
-
-      if (success) {
-        const updatedDay = {
+      const result = await toggleAttendance(day.id, user.id, !isParticipating);
+      if (result.success) {
+        onUpdateDay({
           ...day,
-          can_pay: !day.can_pay,
-        };
-        onUpdateDay(updatedDay);
-        toast.success(day.can_pay ? "Đã khóa thanh toán" : "Đã mở thanh toán");
-      } else {
-        toast.error("Không có quyền thay đổi trạng thái thanh toán");
+          members: isParticipating
+            ? day.members.filter((id) => id !== user.id)
+            : [...day.members, user.id],
+          slots: isParticipating
+            ? day.slots.filter((slot) => slot[0] !== user.id)
+            : [...day.slots, [user.id, 1]],
+        });
+
+        toast.success(
+          isParticipating
+            ? "Đã hủy tham gia"
+            : "Đã đăng ký tham gia"
+        );
+      } else if (result.error) {
+        toast.error(result.error);
       }
     } catch (error) {
-      console.error("Error toggling payment status:", error);
-      toast.error("Có lỗi xảy ra khi thay đổi trạng thái thanh toán");
+      console.error("Error toggling attendance:", error);
+      toast.error("Có lỗi xảy ra khi thực hiện thao tác");
     } finally {
-      setLoading(false);
+      setLoadingAttendance(false);
     }
-  };
-
-  const handleToggleDayStatus = async () => {
-    if (!isAdmin) {
-      toast.error("Bạn không có quyền hủy buổi tập");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const success = await deleteBadmintonDay(day.id);
-      if (!success) throw new Error("Failed to update day status");
-
-      const updatedDay = {
-        ...day,
-        isActive: false,
-      };
-      onUpdateDay(updatedDay);
-      toast.success("Đã hủy buổi tập thành công");
-    } catch (error) {
-      console.error("Error updating day status:", error);
-      toast.error("Có lỗi xảy ra khi hủy buổi tập");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePaymentSuccess = () => {
-    if (user) {
-      const updatedDay = {
-        ...day,
-        paidMembers: [...day.paidMembers, user.id],
-      };
-
-      onUpdateDay(updatedDay);
-    }
-  };
-
-  const handleJoinClick = () => {
-    setParticipantCount("1");
-    setJoinDialogOpen(true);
-  };
-
-  const handleConfirmJoin = async () => {
-    const count = parseInt(participantCount, 10);
-    if (isNaN(count) || count < 1) {
-      toast.error("Số lượng không hợp lệ");
-      return;
-    }
-    
-    await handleToggleParticipation(count);
-    setJoinDialogOpen(false);
   };
 
   return (
-    <div
-      className={`calendar-day p-3 sm:p-4 relative ${
-        day.isActive ? "calendar-day-active" : "bg-gray-100"
-      } 
-        ${isDisabled ? "opacity-70 cursor-not-allowed" : ""}`}
+    <Card
+      className={`transition-all duration-300 ${
+        !day.isActive ? "opacity-60" : ""
+      } ${dayIndex === 0 ? "mt-0" : ""}`}
     >
-      {!day.isActive && (
-        <div className="absolute inset-0 bg-gray-900/50 flex items-center justify-center z-10">
-          <span className="text-white font-semibold text-lg">Đã hủy</span>
+      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+        <div className="flex flex-col">
+          <div className="flex items-center space-x-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <h3 className="font-medium">
+              {getDayName(day.dayOfWeek)} {formatDate(day.date)}
+            </h3>
+          </div>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {day.courtCount && day.courtCount > 1 && (
+              <Badge variant="outline" className="text-xs">
+                {day.courtCount} sân
+              </Badge>
+            )}
+            {!day.isActive && (
+              <Badge variant="destructive" className="text-xs">
+                Đã hủy
+              </Badge>
+            )}
+            {nearGameTime && (
+              <Badge className="bg-yellow-500 text-white hover:bg-yellow-600 text-xs">
+                Sắp diễn ra ({remainingTime})
+              </Badge>
+            )}
+          </div>
         </div>
-      )}
+        <div className="text-right">
+          <div className="flex items-center justify-end space-x-2">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">
+              {totalParticipants}/{day.maxMembers}
+            </span>
+          </div>
 
-      <div className="flex justify-between items-center mb-2 sm:mb-3">
-        <div className="flex items-center gap-1 sm:gap-2">
-          <span
-            className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
-              day.isActive
-                ? "bg-badminton text-white"
-                : "bg-gray-400 text-white"
-            }`}
-          >
-            {getDayName(day.dayOfWeek)}
-          </span>
-          {isAdmin && day.isActive && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 px-1.5 sm:px-2 text-red-500 hover:text-red-600 hover:bg-red-50 text-xs sm:text-sm"
-              onClick={handleToggleDayStatus}
-              disabled={loading}
+          {isParticipating && (
+            <Badge
+              className={`mt-1 ${
+                hasPaid ? "bg-green-500 hover:bg-green-600" : "bg-amber-500 hover:bg-amber-600"
+              }`}
             >
-              <Ban className="h-3 w-3 mr-1" />
-              Hủy
-            </Button>
+              {hasPaid ? "Đã thanh toán" : "Chưa thanh toán"}
+            </Badge>
           )}
         </div>
-        <span className="text-xs sm:text-sm font-semibold">
-          {formatDate(day.date)}
-        </span>
-      </div>
+      </CardHeader>
 
-      <div className="mb-2">
-        <p className="text-xs text-muted-foreground">
-          {totalParticipants}/{day.maxMembers} người tham gia
-        </p>
-        <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-          <div
-            className={`h-1.5 rounded-full transition-all duration-300 ease-out ${
-              day.isActive ? "bg-badminton" : "bg-gray-400"
-            }`}
-            style={{
-              width: `${(totalParticipants / day.maxMembers) * 100}%`,
-            }}
-          ></div>
-        </div>
-      </div>
-
-      <div className="mb-2 sm:mb-3 bg-badminton/5 rounded-lg p-2 text-xs">
-        <div className="flex flex-col sm:flex-row sm:justify-between gap-1 sm:gap-0">
-          <div className="flex justify-between sm:block">
-            <span>Sân: </span>
-            <span className="font-medium">
-              {formatCurrency(day.sessionCost)}
-            </span>
+      <CardContent className="pb-2">
+        <div className="grid gap-2">
+          <div className="flex items-start gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
+            <span>{day.sessionTime}</span>
           </div>
-          <div className="flex justify-between sm:block">
-            <span>Phát sinh: </span>
-            <span className="font-medium">
-              {formatCurrency(
-                day.extraExpenses?.reduce(
-                  (sum, expense) => sum + expense.amount,
-                  0
-                ) || 0
-              )}
-            </span>
-          </div>
-          <div className="flex justify-between sm:block">
-            <span>1 người: </span>
-            <span className="font-medium">
-              {formatCurrency(calculatePaymentAmount(day, user?.id || ""))}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <CalendarDayParticipants day={day} members={members} />
-
-      <ExtraExpenseForm day={day} onUpdateDay={onUpdateDay} />
-
-      {user && (
-        <div className="mt-4">
-          <div className="flex justify-end gap-2">
-            {isParticipating ? (
-              <>
-                {(!isPast || isAdmin) && (
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="border-red-500 text-red-500 hover:bg-red-50"
-                    onClick={() => handleToggleParticipation()}
-                    disabled={loading || isDisabled}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+          
+          {day.location && (
+            <div className="flex items-start gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
+              <div>
+                <div className="font-medium text-sm">{day.location.name}</div>
+                {day.location.address && (
+                  <div className="text-muted-foreground text-xs">{day.location.address}</div>
                 )}
-              </>
-            ) : (
-              !isPast && (
-                <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button
-                      size="icon"
-                      className={`${
-                        day.isActive
-                          ? "bg-badminton hover:bg-badminton/80"
-                          : "bg-gray-400 hover:bg-gray-500"
-                      }`}
-                      onClick={handleJoinClick}
-                      disabled={
-                        loading || isDisabled || totalParticipants >= day.maxMembers
-                      }
-                    >
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Tham gia ngày {formatDate(day.date)}</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="participants">Số lượng người tham gia</Label>
-                        <Input
-                          id="participants"
-                          type="number"
-                          min="1"
-                          max={day.maxMembers - totalParticipants}
-                          value={participantCount}
-                          onChange={(e) => setParticipantCount(e.target.value)}
-                        />
-                      </div>
-                      <Button 
-                        className="w-full bg-badminton hover:bg-badminton/90"
-                        onClick={handleConfirmJoin}
-                        disabled={loading}
-                      >
-                        Xác nhận
-                      </Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )
-            )}
-
-            {isAfterGameTimeWithBuffer(day.date, day.sessionTime) && (
-              <>
-                {isParticipating &&
-                  !hasPaid &&
-                  !members.find((m) => m.id === user?.id)?.isCore && (
-                    <MomoPaymentButton
-                      dayId={day.id}
-                      dayDate={formatDate(day.date)}
-                      amount={calculatePaymentAmount(day, user?.id || "")}
-                      onPaymentSuccess={handlePaymentSuccess}
-                      disabled={loading || !day.can_pay}
-                    />
-                  )}
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="border-badminton text-badminton hover:bg-badminton/10"
-                  onClick={() => onOpenBill(day)}
-                >
-                  <Receipt className="h-4 w-4" />
-                </Button>
-              </>
-            )}
-          </div>
-
-          {isParticipating && user && (
-            <div className="text-sm text-center mt-2">
-              <span className="font-medium">Số tiền cần trả: </span>
-              <span
-                className={`font-semibold ${
-                  calculatePaymentAmount(day, user.id) < 0
-                    ? "text-green-600"
-                    : "text-badminton"
-                }`}
-              >
-                {formatCurrency(calculatePaymentAmount(day, user.id))}
-              </span>
-              <span className="text-xs text-muted-foreground ml-1">
-                ({getParticipantCount(day, user.id)} người)
-              </span>
+              </div>
             </div>
           )}
-        </div>
-      )}
 
-      {profile?.is_admin && (
-        <div className="mt-3 space-y-2">
+          <div className="flex justify-between items-center text-sm pt-1">
+            <span className="text-muted-foreground">Giá: {formatCurrency(day.sessionCost)}</span>
+            {isParticipating && participantSlotCount > 1 && (
+              <Badge variant="outline">x{participantSlotCount}</Badge>
+            )}
+          </div>
+        </div>
+
+        {day.members.length > 0 && (
+          <div className="mt-4">
+            <CalendarDayParticipants
+              day={day}
+              members={members}
+              onUpdateDay={onUpdateDay}
+            />
+          </div>
+        )}
+      </CardContent>
+
+      <CardFooter className="flex justify-between gap-2 pt-0">
+        {userCanJoin && (
           <Button
-            variant={day.can_pay ? "destructive" : "default"}
+            variant={isParticipating ? "destructive" : "default"}
+            className={isParticipating ? "" : "bg-badminton hover:bg-badminton/80"}
             size="sm"
-            className="w-full py-2"
-            onClick={handleTogglePaymentStatus}
-            disabled={loading}
+            onClick={handleToggleAttendance}
+            disabled={loadingAttendance}
+            className="flex-1"
           >
-            {day.can_pay ? "Khóa thanh toán" : "Mở thanh toán"}
+            {loadingAttendance
+              ? "Đang xử lý..."
+              : isParticipating
+              ? "Hủy tham gia"
+              : "Tham gia"}
           </Button>
+        )}
+
+        {day.members.length > 0 && user && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenBill(day)}
+            className="flex-1"
+          >
+            Chi tiết
+          </Button>
+        )}
+
+        {isAdmin && (
           <CalendarAdminActions
             day={day}
-            members={members}
-            onAddUser={handleToggleParticipation}
+            onUpdateDay={onUpdateDay}
+            setLoading={setLoading}
           />
-        </div>
-      )}
-    </div>
+        )}
+      </CardFooter>
+    </Card>
   );
 };

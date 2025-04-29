@@ -48,6 +48,30 @@ export type Database = {
         }
         Relationships: []
       }
+      badminton_locations: {
+        Row: {
+          address: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          address?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       badminton_participants: {
         Row: {
           created_at: string | null
@@ -79,8 +103,6 @@ export type Database = {
         Row: {
           id: string
           max_members: number
-          play_days: number[]
-          play_time: string
           session_price: number
           updated_at: string
           updated_by: string | null
@@ -88,8 +110,6 @@ export type Database = {
         Insert: {
           id?: string
           max_members?: number
-          play_days?: number[]
-          play_time?: string
           session_price?: number
           updated_at?: string
           updated_by?: string | null
@@ -97,8 +117,6 @@ export type Database = {
         Update: {
           id?: string
           max_members?: number
-          play_days?: number[]
-          play_time?: string
           session_price?: number
           updated_at?: string
           updated_by?: string | null
@@ -158,6 +176,47 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      day_settings: {
+        Row: {
+          court_count: number
+          created_at: string
+          day_of_week: number
+          id: string
+          is_active: boolean
+          location_id: string | null
+          play_time: string
+          updated_at: string
+        }
+        Insert: {
+          court_count?: number
+          created_at?: string
+          day_of_week: number
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          play_time: string
+          updated_at?: string
+        }
+        Update: {
+          court_count?: number
+          created_at?: string
+          day_of_week?: number
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          play_time?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "day_settings_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "badminton_locations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       extra_expenses: {
         Row: {

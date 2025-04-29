@@ -61,10 +61,17 @@ export async function fetchBadmintonDays(
   month: number
 ): Promise<CalendarDay[]> {
   try {
-    // Fetch the days
+    // Fetch the days along with location information
     const { data, error } = await supabase
       .from("badminton_days")
-      .select("*")
+      .select(`
+        *,
+        day_settings:day_of_week (
+          court_count,
+          location_id
+        ),
+        location:day_settings!inner(location_id(id, name, address))
+      `)
       .gte("date", `${year}-${month.toString().padStart(2, "0")}-01`)
       .lt("date", `${year}-${(month + 1).toString().padStart(2, "0")}-01`);
 
@@ -99,6 +106,16 @@ export async function fetchBadmintonDays(
         const participants = await fetchDayParticipants(day.id);
         const expenses = await fetchExtraExpenses(day.id);
 
+        // Extract location information
+        const location = day.location ? {
+          id: day.location.id,
+          name: day.location.name,
+          address: day.location.address,
+        } : null;
+
+        // Get court count from day settings or default to 1
+        const courtCount = day.day_settings?.court_count || 1;
+
         return {
           id: day.id,
           date: new Date(day.date).toISOString(),
@@ -115,6 +132,9 @@ export async function fetchBadmintonDays(
           extraExpenses: expenses,
           can_pay: day.can_pay,
           _removedCoreMembers: optOutsByDay[day.id] || [],
+          // Add new properties for location and court count
+          location: location,
+          courtCount: courtCount,
         };
       })
     );
