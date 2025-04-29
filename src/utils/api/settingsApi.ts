@@ -1,5 +1,6 @@
 
 import { supabase } from "@/integrations/supabase/client";
+import { generateCurrentMonthDays } from "@/utils/api/dayApi";
 
 // Fetch badminton settings
 export async function fetchBadmintonSettings() {
@@ -205,8 +206,5 @@ export async function deleteDaySetting(id: string) {
 // Generate days for the current month
 export async function generateCurrentMonthDays() {
   const date = new Date();
-  return generateBadmintonDays(date.getFullYear(), date.getMonth() + 1);
+  return generateCurrentMonthDays();
 }
-
-// I've removed the duplicate export of generateBadmintonDays function from here
-// as it's already exported from dayApi.ts

@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { CalendarDay } from "../schedulerUtils";
 import { fetchDayParticipants } from "./participantApi";
@@ -53,6 +52,12 @@ export async function generateBadmintonDays(year: number, month: number) {
     console.error("Error generating badminton days:", error);
     return [];
   }
+}
+
+// Generate days for the current month
+export async function generateCurrentMonthDays() {
+  const date = new Date();
+  return generateBadmintonDays(date.getFullYear(), date.getMonth() + 1);
 }
 
 // Fetch badminton days for a specific month
