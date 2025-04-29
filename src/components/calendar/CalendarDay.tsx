@@ -1,4 +1,3 @@
-
 // src/components/calendar/CalendarDay.tsx
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -58,7 +57,7 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
     try {
       setLoadingAttendance(true);
 
-      const result = await toggleAttendance(day.id, user.id, !isParticipating);
+      const result = await toggleAttendance(day.id, user.id, isParticipating);
       if (result.success) {
         onUpdateDay({
           ...day,

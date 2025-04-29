@@ -20,6 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { toggleAttendance } from "@/utils/api/participantApi";
+import { toast } from "sonner";
 
 interface CalendarAdminActionsProps {
   day: CalendarDay;
@@ -45,12 +47,43 @@ export const CalendarAdminActions: React.FC<CalendarAdminActionsProps> = ({
   );
 
   const handleAddUser = async () => {
-    if (!selectedUser || !onAddUser) {
+    if (!selectedUser || !onUpdateDay || !setLoading) {
       return;
     }
 
-    await onAddUser(parseInt(participantCount), selectedUser);
-    setIsOpen(false);
+    try {
+      setLoading(true);
+      
+      // If a user is not already participating, add them
+      const isParticipating = day.members.includes(selectedUser);
+      const count = parseInt(participantCount);
+      
+      // We'll use the toggleAttendance function to add the user
+      const result = await toggleAttendance(day.id, selectedUser, isParticipating, count);
+      
+      if (result.success) {
+        // Update the day data
+        onUpdateDay({
+          ...day,
+          members: isParticipating 
+            ? day.members.filter(id => id !== selectedUser) 
+            : [...day.members, selectedUser],
+          slots: isParticipating
+            ? day.slots.filter(slot => slot[0] !== selectedUser)
+            : [...day.slots, [selectedUser, count]]
+        });
+        
+        toast.success(`Đã thêm người tham gia thành công`);
+        setIsOpen(false);
+      } else if (result.error) {
+        toast.error(result.error);
+      }
+    } catch (error) {
+      console.error("Error adding user:", error);
+      toast.error("Có lỗi xảy ra khi thêm người tham gia");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

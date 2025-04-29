@@ -29,7 +29,7 @@ export async function toggleParticipation(
   dayId: string,
   userId: string,
   isParticipating: boolean,
-  slot: number
+  slot: number = 1
 ): Promise<boolean> {
   try {
     console.log("toggleParticipation called with:", {
@@ -91,6 +91,22 @@ export async function toggleParticipation(
   } catch (error) {
     console.error("Error toggling participation:", error);
     return false;
+  }
+}
+
+// New function to toggle attendance with a proper return type
+export async function toggleAttendance(
+  dayId: string,
+  userId: string,
+  isParticipating: boolean,
+  slot: number = 1
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const result = await toggleParticipation(dayId, userId, isParticipating, slot);
+    return { success: result };
+  } catch (error) {
+    console.error("Error toggling attendance:", error);
+    return { success: false, error: "Failed to update attendance" };
   }
 }
 
