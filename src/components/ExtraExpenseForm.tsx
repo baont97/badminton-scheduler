@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { CalendarDay, formatCurrency } from "@/utils/schedulerUtils";
 import {
@@ -68,6 +69,29 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
           extraExpenses: [...(day.extraExpenses || []), newExpense],
         };
 
+        // Check if user should be marked as paid
+        const userSlotCount = day.slots.find(
+          slot => slot[0] === user?.id
+        )?.[1] || 1;
+        
+        const totalSlots = day.slots.reduce((sum, slot) => sum + slot[1], 0);
+        const costPerSlot = 
+          (day.sessionCost + 
+            (updatedDay.extraExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0)
+          ) / totalSlots;
+        
+        const userTotalCost = costPerSlot * userSlotCount;
+        
+        const userExpenses = updatedDay.extraExpenses
+          ?.filter(exp => exp.userId === user?.id)
+          .reduce((sum, exp) => sum + exp.amount, 0) || 0;
+        
+        if (userExpenses >= userTotalCost && user?.id && !day.paidMembers.includes(user.id)) {
+          // If user expenses are enough to cover their share, mark them as paid
+          updatedDay.paidMembers = [...updatedDay.paidMembers, user.id];
+          toast.success("Chi phí của bạn đã đủ để đánh dấu là đã thanh toán");
+        }
+
         onUpdateDay(updatedDay);
         setAmount("");
         setDescription("");
@@ -83,7 +107,7 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
     }
   };
 
-  const handleDeleteExpense = async (expenseId: string) => {
+  const handleDeleteExpense = async (expenseId: string, expenseUserId: string) => {
     if (!user) {
       toast.error("Bạn cần đăng nhập để xóa chi phí phát sinh");
       return;
@@ -96,12 +120,41 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
       if (success) {
         toast.success("Đã xóa chi phí phát sinh");
 
+        // Remove the expense from the day's expenses
+        const updatedExpenses = (day.extraExpenses || []).filter(
+          expense => expense.id !== expenseId
+        );
+
         const updatedDay = {
           ...day,
-          extraExpenses: (day.extraExpenses || []).filter(
-            (expense) => expense.id !== expenseId
-          ),
+          extraExpenses: updatedExpenses,
         };
+
+        // Check if user's payment status should be updated
+        if (expenseUserId === user.id && day.paidMembers.includes(user.id)) {
+          // Recalculate if the user should still be marked as paid
+          const userSlotCount = day.slots.find(
+            slot => slot[0] === user.id
+          )?.[1] || 1;
+          
+          const totalSlots = day.slots.reduce((sum, slot) => sum + slot[1], 0);
+          const costPerSlot = 
+            (day.sessionCost + 
+              (updatedExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0)
+            ) / totalSlots;
+          
+          const userTotalCost = costPerSlot * userSlotCount;
+          
+          const userExpenses = updatedExpenses
+            ?.filter(exp => exp.userId === user.id)
+            .reduce((sum, exp) => sum + exp.amount, 0) || 0;
+          
+          if (userExpenses < userTotalCost) {
+            // User no longer has enough expenses to cover their share
+            updatedDay.paidMembers = updatedDay.paidMembers.filter(id => id !== user.id);
+            toast.info("Trạng thái thanh toán đã được cập nhật lại");
+          }
+        }
 
         onUpdateDay(updatedDay);
       } else {
@@ -210,8 +263,8 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
                       variant="ghost"
                       size="sm"
                       className="h-7 w-7 p-0 ml-2 text-destructive"
-                      onClick={() => handleDeleteExpense(expense.id)}
-                      disabled={loading || user?.id !== expense.userId}
+                      onClick={() => handleDeleteExpense(expense.id, expense.userId)}
+                      disabled={loading || (user?.id !== expense.userId && !isAdmin)}
                     >
                       <Trash2 className="h-4 w-4" />
                       <span className="sr-only">Xóa</span>

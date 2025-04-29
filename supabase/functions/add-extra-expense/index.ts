@@ -47,6 +47,9 @@ Deno.serve(async (req) => {
       )
     }
 
+    // After adding the expense, check if the user who added it should be automatically marked as paid
+    await updatePaymentStatusForExpenseUser(supabase, day_id, user_id)
+
     return new Response(
       JSON.stringify(true),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
@@ -59,3 +62,84 @@ Deno.serve(async (req) => {
     )
   }
 })
+
+// Function to update payment status based on user's expenses and share
+async function updatePaymentStatusForExpenseUser(supabase, dayId, userId) {
+  try {
+    // Get all participants for the day to calculate shares
+    const { data: participants, error: participantsError } = await supabase
+      .from('badminton_participants')
+      .select('user_id, slot')
+      .eq('day_id', dayId)
+
+    if (participantsError) {
+      console.error('Error fetching participants:', participantsError)
+      return
+    }
+
+    // Get day details for session cost
+    const { data: dayData, error: dayError } = await supabase
+      .from('badminton_days')
+      .select('session_cost')
+      .eq('id', dayId)
+      .single()
+
+    if (dayError || !dayData) {
+      console.error('Error fetching day data:', dayError)
+      return
+    }
+
+    // Get all expenses for the day
+    const { data: expenses, error: expensesError } = await supabase
+      .from('extra_expenses')
+      .select('user_id, amount')
+      .eq('day_id', dayId)
+
+    if (expensesError) {
+      console.error('Error fetching expenses:', expensesError)
+      return
+    }
+
+    // Calculate total user slots
+    const totalSlots = participants.reduce((sum, p) => sum + (p.slot || 1), 0)
+    if (totalSlots === 0) return
+
+    // Calculate cost per person (session cost + all expenses)
+    const totalSessionCost = dayData.session_cost
+    const totalExtraCost = expenses.reduce((sum, expense) => sum + expense.amount, 0)
+    const costPerSlot = (totalSessionCost + totalExtraCost) / totalSlots
+
+    // Calculate the user's slot count
+    const userParticipant = participants.find(p => p.user_id === userId)
+    if (!userParticipant) return
+
+    const userSlotCount = userParticipant.slot || 1
+    const userTotalCost = costPerSlot * userSlotCount
+
+    // Calculate total expenses added by the user
+    const userExpenses = expenses
+      .filter(expense => expense.user_id === userId)
+      .reduce((sum, expense) => sum + expense.amount, 0)
+
+    // Check if user's expenses cover or exceed their share
+    const shouldMarkAsPaid = userExpenses >= userTotalCost
+
+    if (shouldMarkAsPaid) {
+      // Update participant's payment status to paid
+      await supabase
+        .from('badminton_participants')
+        .update({ has_paid: true })
+        .eq('day_id', dayId)
+        .eq('user_id', userId)
+    } else {
+      // If user was previously marked as paid because of expenses but no longer meets the criteria
+      await supabase
+        .from('badminton_participants')
+        .update({ has_paid: false })
+        .eq('day_id', dayId)
+        .eq('user_id', userId)
+    }
+  } catch (error) {
+    console.error('Error updating payment status:', error)
+  }
+}
