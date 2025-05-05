@@ -94,13 +94,16 @@ export const CalendarEmptyState: React.FC<CalendarEmptyStateProps> = ({
               <Button
                 onClick={handleGenerateDays}
                 disabled={isButtonDisabled}
-                className="bg-badminton hover:bg-badminton/90"
+                className="w-full max-w-xs bg-badminton hover:bg-badminton/90"
                 size="sm"
               >
                 {isButtonDisabled ? (
                   <RefreshCw className="h-4 w-4 animate-spin" />
                 ) : (
-                  <CalendarIcon className="h-4 w-4" />
+                  <>
+                    <CalendarIcon className="h-4 w-4" />
+                    <span>Tạo buổi tập</span>
+                  </>
                 )}
               </Button>
             </TooltipTrigger>

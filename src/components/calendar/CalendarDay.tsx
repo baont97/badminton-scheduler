@@ -53,6 +53,11 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
   const participantSlotCount = getParticipantCount(day, user?.id || "");
   const totalParticipants = getTotalParticipantsInDay(day);
 
+  // Calculate total session cost based on court count
+  const totalSessionCost = day.courtCount && day.courtCount > 1 
+    ? day.sessionCost * day.courtCount 
+    : day.sessionCost;
+
   const handleToggleAttendance = async () => {
     if (!user || loading) return;
 
@@ -159,7 +164,7 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
           )}
 
           <div className="flex justify-between items-center text-sm pt-1">
-            <span className="text-muted-foreground">Giá: {formatCurrency(day.sessionCost)}</span>
+            <span className="text-muted-foreground">Giá: {formatCurrency(totalSessionCost)}</span>
             {isParticipating && participantSlotCount > 1 && (
               <Badge variant="outline">x{participantSlotCount}</Badge>
             )}
@@ -183,8 +188,7 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
               <TooltipTrigger asChild>
                 <Button
                   variant={isParticipating ? "destructive" : "default"}
-                  className={isParticipating ? "" : "bg-badminton hover:bg-badminton/80"}
-                  size="icon"
+                  className={`flex-1 ${isParticipating ? "" : "bg-badminton hover:bg-badminton/80"}`}
                   onClick={handleToggleAttendance}
                   disabled={loadingAttendance}
                 >
@@ -210,7 +214,7 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
               <TooltipTrigger asChild>
                 <Button
                   variant="outline"
-                  size="icon"
+                  className="flex-1"
                   onClick={() => onOpenBill(day)}
                 >
                   <span>&#9776;</span>

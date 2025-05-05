@@ -139,10 +139,16 @@ export const calculatePaymentAmount = (day: CalendarDay, memberId: string, allMe
   if (totalParticipants === 0) return 0;
   
   const participantCount = getParticipantCount(day, memberId);
+  
+  // Calculate total session cost, accounting for multiple courts
+  const totalSessionCost = day.courtCount && day.courtCount > 1 
+    ? day.sessionCost * day.courtCount 
+    : day.sessionCost;
+    
   const totalExtraExpenses = getTotalExtraExpenses(day);
   const extraExpensesPerPerson = totalExtraExpenses / totalParticipants;
   
-  const costPerSlot = day.sessionCost / totalParticipants;
+  const costPerSlot = totalSessionCost / totalParticipants;
   
   const totalCost = (costPerSlot * participantCount) + (extraExpensesPerPerson * participantCount);
   
