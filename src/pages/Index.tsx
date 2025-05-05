@@ -87,10 +87,12 @@ const Index = () => {
   // Create a wrapper function that matches the expected type
   const refreshCalendarDataWrapper = async (): Promise<void> => {
     try {
-      await refreshCalendarData();
+      const result = await refreshCalendarData();
+      console.log("Calendar data refreshed:", result);
       return;
     } catch (error) {
       console.error("Error refreshing calendar data:", error);
+      toast.error("Không thể tải lại lịch hoạt động");
       throw error;
     }
   };

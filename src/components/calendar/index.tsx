@@ -14,7 +14,7 @@ interface CalendarProps {
   currentMonth: number;
   currentYear: number;
   onChangeMonth: (month: number, year: number) => void;
-  refreshData: () => Promise<void>; // Updated type to show it returns a Promise
+  refreshData: () => Promise<void>; // Ensure this returns a Promise<void>
 }
 
 const Calendar: React.FC<CalendarProps> = ({
@@ -73,10 +73,19 @@ const Calendar: React.FC<CalendarProps> = ({
       />
 
       {days.length === 0 ? (
-        <CalendarEmptyState onGenerateDays={() => {
-          setLoading(true);
-          refreshData().finally(() => setLoading(false));
-        }} loading={loading} />
+        <CalendarEmptyState 
+          onGenerateDays={() => {
+            setLoading(true);
+            // Properly handle the Promise
+            refreshData()
+              .then(() => setLoading(false))
+              .catch(error => {
+                console.error("Error generating days:", error);
+                setLoading(false);
+              });
+          }} 
+          loading={loading} 
+        />
       ) : (
         <CalendarGrid
           days={days}

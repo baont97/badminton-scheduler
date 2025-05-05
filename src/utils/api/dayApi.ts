@@ -7,6 +7,8 @@ import { fetchExtraExpenses } from "./expenseApi";
 // Generate badminton days for a specific month
 export async function generateBadmintonDays(year: number, month: number) {
   try {
+    console.log(`Generating badminton days for ${year}-${month}`);
+    
     // First, fetch existing days to preserve their status
     const { data: existingDays, error: fetchError } = await supabase
       .from("badminton_days")
@@ -14,12 +16,17 @@ export async function generateBadmintonDays(year: number, month: number) {
       .gte("date", `${year}-${month.toString().padStart(2, "0")}-01`)
       .lt("date", `${year}-${(month + 1).toString().padStart(2, "0")}-01`);
 
-    if (fetchError) throw fetchError;
+    if (fetchError) {
+      console.error("Error fetching existing days:", fetchError);
+      throw fetchError;
+    }
 
     // Create a map of existing days by date
     const existingDaysMap = new Map(
       existingDays?.map((day) => [day.date, day]) || []
     );
+
+    console.log(`Found ${existingDays?.length || 0} existing days`);
 
     // Generate new days
     const { data, error } = await supabase.rpc("generate_badminton_days", {
@@ -27,7 +34,12 @@ export async function generateBadmintonDays(year: number, month: number) {
       _month: month,
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error calling generate_badminton_days RPC:", error);
+      throw error;
+    }
+
+    console.log(`Generated ${data?.length || 0} days from RPC`);
 
     // For each generated day, preserve the is_active status if it exists
     const updatedDays = data.map((day: any) => {
@@ -46,12 +58,16 @@ export async function generateBadmintonDays(year: number, month: number) {
       .from("badminton_days")
       .upsert(updatedDays, { onConflict: "date" });
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error("Error upserting badminton days:", updateError);
+      throw updateError;
+    }
 
+    console.log(`Successfully upserted ${updatedDays.length} days`);
     return updatedDays;
   } catch (error) {
     console.error("Error generating badminton days:", error);
-    return [];
+    throw error; // Rethrow to allow proper error handling
   }
 }
 

@@ -25,20 +25,20 @@ export const CalendarEmptyState: React.FC<CalendarEmptyStateProps> = ({
       return;
     }
 
-    if (!onGenerateDays) {
-      const currentDate = new Date();
-      try {
+    try {
+      if (onGenerateDays) {
+        onGenerateDays();
+      } else {
+        const currentDate = new Date();
         await generateBadmintonDays(
           currentDate.getFullYear(),
           currentDate.getMonth() + 1
         );
         toast.success("Đã tạo buổi tập thành công");
-      } catch (error) {
-        console.error("Error generating days:", error);
-        toast.error("Có lỗi xảy ra khi tạo buổi tập");
       }
-    } else {
-      onGenerateDays();
+    } catch (error) {
+      console.error("Error generating days:", error);
+      toast.error("Có lỗi xảy ra khi tạo buổi tập");
     }
   };
 
