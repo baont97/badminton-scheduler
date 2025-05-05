@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Calendar from "@/components/calendar";
@@ -87,13 +86,30 @@ const Index = () => {
   // Create a wrapper function that matches the expected type
   const refreshCalendarDataWrapper = async (): Promise<void> => {
     try {
+      // Show loading toast
+      const loadingToast = toast.loading("Đang tải lại dữ liệu...");
+
+      // Use await to properly handle the promise
       const result = await refreshCalendarData();
-      console.log("Calendar data refreshed:", result);
-      return;
+
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+
+      if (result.data && result.data.length > 0) {
+        setDays(result.data);
+        toast.success("Đã tải lại lịch hoạt động thành công");
+      } else if (result.data && result.data.length === 0) {
+        // No data returned, might need to generate
+        toast.info("Không có buổi tập nào trong tháng này");
+      } else if (result.error) {
+        throw result.error;
+      }
     } catch (error) {
       console.error("Error refreshing calendar data:", error);
-      toast.error("Không thể tải lại lịch hoạt động");
-      throw error;
+      toast.error(
+        "Không thể tải lại lịch hoạt động: " +
+          (error instanceof Error ? error.message : String(error))
+      );
     }
   };
 

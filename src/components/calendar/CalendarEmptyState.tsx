@@ -1,5 +1,4 @@
-
-// src/components/Calendar/CalendarEmptyState.tsx
+// Fixed version of src/components/Calendar/CalendarEmptyState.tsx
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { CalendarIcon, RefreshCw } from "lucide-react";
@@ -19,28 +18,61 @@ export const CalendarEmptyState: React.FC<CalendarEmptyStateProps> = ({
   const { profile } = useAuth();
   const isAdmin = profile?.is_admin === true;
 
+  // Local loading state to prevent double clicks
+  const [isGenerating, setIsGenerating] = React.useState(false);
+
   const handleGenerateDays = async () => {
     if (!isAdmin) {
       toast.error("Bạn không có quyền tạo buổi tập");
       return;
     }
 
+    // Prevent multiple clicks
+    if (isGenerating) return;
+
+    setIsGenerating(true);
+
     try {
-      if (onGenerateDays) {
-        onGenerateDays();
+      // Fallback to direct API call if no callback provided
+      const currentDate = new Date();
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth() + 1;
+
+      // Show loading toast
+      toast.loading("Đang tạo buổi tập...", { id: "creating-days" });
+
+      console.log("Calling generateBadmintonDays directly");
+      // Call the function directly with proper error handling
+      const result = await generateBadmintonDays(year, month);
+
+      toast.dismiss("creating-days");
+      if (result && result.length > 0) {
+        toast.success(`Đã tạo ${result.length} buổi tập thành công`);
       } else {
-        const currentDate = new Date();
-        await generateBadmintonDays(
-          currentDate.getFullYear(),
-          currentDate.getMonth() + 1
-        );
-        toast.success("Đã tạo buổi tập thành công");
+        toast.warning("Không có buổi tập nào được tạo");
+      }
+
+      if (onGenerateDays) {
+        // Call the provided callback
+        onGenerateDays();
       }
     } catch (error) {
+      toast.dismiss("creating-days");
       console.error("Error generating days:", error);
-      toast.error("Có lỗi xảy ra khi tạo buổi tập");
+
+      // Display detailed error message
+      if (error instanceof Error) {
+        toast.error(`Lỗi: ${error.message}`);
+      } else {
+        toast.error("Có lỗi xảy ra khi tạo buổi tập");
+      }
+    } finally {
+      setIsGenerating(false);
     }
   };
+
+  // Combine the loading states from props and local state
+  const isButtonDisabled = loading || isGenerating;
 
   return (
     <div className="flex flex-col items-center justify-center py-8 sm:py-12">
@@ -51,15 +83,20 @@ export const CalendarEmptyState: React.FC<CalendarEmptyStateProps> = ({
       {isAdmin && (
         <Button
           onClick={handleGenerateDays}
-          disabled={loading}
+          disabled={isButtonDisabled}
           className="bg-badminton hover:bg-badminton/90 text-sm"
         >
-          {loading ? (
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+          {isButtonDisabled ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+              Đang xử lý...
+            </>
           ) : (
-            <CalendarIcon className="h-4 w-4 mr-2" />
+            <>
+              <CalendarIcon className="h-4 w-4 mr-2" />
+              Tạo buổi tập
+            </>
           )}
-          Tạo buổi tập
         </Button>
       )}
     </div>
