@@ -22,6 +22,12 @@ import {
 } from "@/components/ui/select";
 import { toggleAttendance } from "@/utils/api/participantApi";
 import { toast } from "sonner";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 interface CalendarAdminActionsProps {
   day: CalendarDay;
@@ -88,15 +94,25 @@ export const CalendarAdminActions: React.FC<CalendarAdminActionsProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full border-badminton text-badminton hover:bg-badminton/10"
-        >
-          <UserPlus className="h-4 w-4 mr-1" /> Thêm người tham gia
-        </Button>
-      </DialogTrigger>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="border-badminton text-badminton hover:bg-badminton/10"
+              >
+                <UserPlus className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Thêm người tham gia</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Thêm người tham gia</DialogTitle>

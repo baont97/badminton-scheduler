@@ -1,3 +1,4 @@
+
 // src/components/calendar/CalendarDay.tsx
 import React, { useState } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -18,6 +19,7 @@ import {
 } from "@/utils/schedulerUtils";
 import { toggleDayPaymentStatus } from "@/utils/api";
 import { isWithinOneHourOfSession, useCalendarDayUser, getRemainingTime, isAfterGameTimeWithBuffer } from "./utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Import the correct toggleAttendance function
 import { toggleAttendance } from "@/utils/api/participantApi";
@@ -176,31 +178,49 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
 
       <CardFooter className="flex justify-between gap-2 pt-0">
         {userCanJoin && (
-          <Button
-            variant={isParticipating ? "destructive" : "default"}
-            className={isParticipating ? "" : "bg-badminton hover:bg-badminton/80"}
-            size="sm"
-            onClick={handleToggleAttendance}
-            disabled={loadingAttendance}
-            // Remove duplicate className attribute
-          >
-            {loadingAttendance
-              ? "Đang xử lý..."
-              : isParticipating
-              ? "Hủy tham gia"
-              : "Tham gia"}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={isParticipating ? "destructive" : "default"}
+                  className={isParticipating ? "" : "bg-badminton hover:bg-badminton/80"}
+                  size="icon"
+                  onClick={handleToggleAttendance}
+                  disabled={loadingAttendance}
+                >
+                  {loadingAttendance ? (
+                    <span className="animate-spin">&#8635;</span>
+                  ) : isParticipating ? (
+                    <span>✕</span>
+                  ) : (
+                    <span>+</span>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isParticipating ? "Hủy tham gia" : "Tham gia"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
 
         {day.members.length > 0 && user && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => onOpenBill(day)}
-            className="flex-1"
-          >
-            Chi tiết
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => onOpenBill(day)}
+                >
+                  <span>&#9776;</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Chi tiết</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
 
         {isAdmin && (

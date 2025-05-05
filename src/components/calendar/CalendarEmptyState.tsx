@@ -1,3 +1,4 @@
+
 // Fixed version of src/components/Calendar/CalendarEmptyState.tsx
 import React from "react";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,12 @@ import { CalendarIcon, RefreshCw } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { generateBadmintonDays } from "@/utils/api/dayApi";
 import { toast } from "sonner";
+import { 
+  Tooltip, 
+  TooltipContent, 
+  TooltipProvider, 
+  TooltipTrigger 
+} from "@/components/ui/tooltip";
 
 interface CalendarEmptyStateProps {
   onGenerateDays?: () => void;
@@ -81,23 +88,27 @@ export const CalendarEmptyState: React.FC<CalendarEmptyStateProps> = ({
         Chưa có buổi tập nào trong tháng này
       </p>
       {isAdmin && (
-        <Button
-          onClick={handleGenerateDays}
-          disabled={isButtonDisabled}
-          className="bg-badminton hover:bg-badminton/90 text-sm"
-        >
-          {isButtonDisabled ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-              Đang xử lý...
-            </>
-          ) : (
-            <>
-              <CalendarIcon className="h-4 w-4 mr-2" />
-              Tạo buổi tập
-            </>
-          )}
-        </Button>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={handleGenerateDays}
+                disabled={isButtonDisabled}
+                className="bg-badminton hover:bg-badminton/90"
+                size="sm"
+              >
+                {isButtonDisabled ? (
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CalendarIcon className="h-4 w-4" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Tạo buổi tập</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
     </div>
   );
