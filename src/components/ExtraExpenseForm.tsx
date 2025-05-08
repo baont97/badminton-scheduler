@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { CalendarDay, formatCurrency } from "@/utils/schedulerUtils";
 import {
@@ -21,6 +20,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -36,7 +42,7 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const { user, profile } = useAuth();
   const isAdmin = profile?.is_admin === true;
 
@@ -76,23 +82,30 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
         };
 
         // Check if user should be marked as paid
-        const userSlotCount = day.slots.find(
-          slot => slot[0] === user?.id
-        )?.[1] || 1;
-        
+        const userSlotCount =
+          day.slots.find((slot) => slot[0] === user?.id)?.[1] || 1;
+
         const totalSlots = day.slots.reduce((sum, slot) => sum + slot[1], 0);
-        const costPerSlot = 
-          (day.sessionCost + 
-            (updatedDay.extraExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0)
-          ) / totalSlots;
-        
+        const costPerSlot =
+          (day.sessionCost +
+            (updatedDay.extraExpenses?.reduce(
+              (sum, exp) => sum + exp.amount,
+              0
+            ) || 0)) /
+          totalSlots;
+
         const userTotalCost = costPerSlot * userSlotCount;
-        
-        const userExpenses = updatedDay.extraExpenses
-          ?.filter(exp => exp.userId === user?.id)
-          .reduce((sum, exp) => sum + exp.amount, 0) || 0;
-        
-        if (userExpenses >= userTotalCost && user?.id && !day.paidMembers.includes(user.id)) {
+
+        const userExpenses =
+          updatedDay.extraExpenses
+            ?.filter((exp) => exp.userId === user?.id)
+            .reduce((sum, exp) => sum + exp.amount, 0) || 0;
+
+        if (
+          userExpenses >= userTotalCost &&
+          user?.id &&
+          !day.paidMembers.includes(user.id)
+        ) {
           // If user expenses are enough to cover their share, mark them as paid
           updatedDay.paidMembers = [...updatedDay.paidMembers, user.id];
           toast.success("Chi phí của bạn đã đủ để đánh dấu là đã thanh toán");
@@ -101,7 +114,7 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
         onUpdateDay(updatedDay);
         setAmount("");
         setDescription("");
-        setShowForm(false);
+        setIsOpen(false);
       } else {
         toast.error("Không thể thêm chi phí phát sinh");
       }
@@ -113,7 +126,10 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
     }
   };
 
-  const handleDeleteExpense = async (expenseId: string, expenseUserId: string) => {
+  const handleDeleteExpense = async (
+    expenseId: string,
+    expenseUserId: string
+  ) => {
     if (!user) {
       toast.error("Bạn cần đăng nhập để xóa chi phí phát sinh");
       return;
@@ -128,7 +144,7 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
 
         // Remove the expense from the day's expenses
         const updatedExpenses = (day.extraExpenses || []).filter(
-          expense => expense.id !== expenseId
+          (expense) => expense.id !== expenseId
         );
 
         const updatedDay = {
@@ -139,25 +155,28 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
         // Check if user's payment status should be updated
         if (expenseUserId === user.id && day.paidMembers.includes(user.id)) {
           // Recalculate if the user should still be marked as paid
-          const userSlotCount = day.slots.find(
-            slot => slot[0] === user.id
-          )?.[1] || 1;
-          
+          const userSlotCount =
+            day.slots.find((slot) => slot[0] === user.id)?.[1] || 1;
+
           const totalSlots = day.slots.reduce((sum, slot) => sum + slot[1], 0);
-          const costPerSlot = 
-            (day.sessionCost + 
-              (updatedExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0)
-            ) / totalSlots;
-          
+          const costPerSlot =
+            (day.sessionCost +
+              (updatedExpenses?.reduce((sum, exp) => sum + exp.amount, 0) ||
+                0)) /
+            totalSlots;
+
           const userTotalCost = costPerSlot * userSlotCount;
-          
-          const userExpenses = updatedExpenses
-            ?.filter(exp => exp.userId === user.id)
-            .reduce((sum, exp) => sum + exp.amount, 0) || 0;
-          
+
+          const userExpenses =
+            updatedExpenses
+              ?.filter((exp) => exp.userId === user.id)
+              .reduce((sum, exp) => sum + exp.amount, 0) || 0;
+
           if (userExpenses < userTotalCost) {
             // User no longer has enough expenses to cover their share
-            updatedDay.paidMembers = updatedDay.paidMembers.filter(id => id !== user.id);
+            updatedDay.paidMembers = updatedDay.paidMembers.filter(
+              (id) => id !== user.id
+            );
             toast.info("Trạng thái thanh toán đã được cập nhật lại");
           }
         }
@@ -181,73 +200,72 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
           <Coins className="h-3.5 w-3.5 mr-1.5 text-badminton" />
           Chi phí phát sinh:
         </h3>
-        {!showForm && (
+
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs border-badminton text-badminton hover:bg-badminton/10 w-full px-3"
-                  onClick={() => setShowForm(true)}
-                >
-                  <PlusCircle className="h-3.5 w-3.5 mr-1" />
-                  Thêm chi phí
-                </Button>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs border-badminton text-badminton hover:bg-badminton/10 px-3"
+                  >
+                    <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                    Thêm chi phí
+                  </Button>
+                </DialogTrigger>
               </TooltipTrigger>
               <TooltipContent>
                 <p>Thêm chi phí phát sinh</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-        )}
-      </div>
 
-      {showForm && (
-        <form
-          onSubmit={handleSubmit}
-          className="space-y-2 p-3 border-l-2 border-badminton rounded-md bg-badminton/5 shadow-sm"
-        >
-          <div>
-            <Input
-              type="number"
-              placeholder="Số tiền (VND)"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="text-sm"
-              autoFocus
-            />
-          </div>
-          <div>
-            <Textarea
-              placeholder="Mô tả chi phí"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="text-sm min-h-[60px]"
-            />
-          </div>
-          <div className="flex justify-between gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-1/2"
-              type="button"
-              onClick={() => setShowForm(false)}
-            >
-              Hủy
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              className="w-1/2 bg-badminton hover:bg-badminton/90"
-              disabled={loading}
-            >
-              <Coins className="h-4 w-4 mr-1" />
-              Thêm
-            </Button>
-          </div>
-        </form>
-      )}
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Thêm chi phí phát sinh</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Input
+                  type="number"
+                  placeholder="Số tiền (VND)"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="text-sm"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <Textarea
+                  placeholder="Mô tả chi phí"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="text-sm min-h-[100px]"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-badminton hover:bg-badminton/90"
+                  disabled={loading}
+                >
+                  <Coins className="h-4 w-4 mr-1" />
+                  Thêm
+                </Button>
+              </div>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
 
       {day.extraExpenses && day.extraExpenses.length > 0 ? (
         <div className="rounded-md border overflow-hidden shadow-sm">
@@ -281,8 +299,13 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
                             variant="ghost"
                             size="sm"
                             className="h-7 w-7 p-0 ml-2 text-destructive"
-                            onClick={() => handleDeleteExpense(expense.id, expense.userId)}
-                            disabled={loading || (user?.id !== expense.userId && !isAdmin)}
+                            onClick={() =>
+                              handleDeleteExpense(expense.id, expense.userId)
+                            }
+                            disabled={
+                              loading ||
+                              (user?.id !== expense.userId && !isAdmin)
+                            }
                           >
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Xóa</span>
