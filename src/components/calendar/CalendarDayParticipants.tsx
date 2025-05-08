@@ -5,7 +5,6 @@ import {
   getParticipantCount,
   calculatePaymentAmount,
   formatCurrency,
-  calculateExtraExpensesPayment,
 } from "@/utils/schedulerUtils";
 import { Badge } from "@/components/ui/badge";
 import { Check, Clock } from "lucide-react";
@@ -29,18 +28,14 @@ export const CalendarDayParticipants: React.FC<
   const isMobile = useIsMobile();
 
   // Helper to determine payment status text
-  const getPaymentStatusText = (
-    member: Member,
-    isPaid: boolean,
-    extraAmount: number
-  ) => {
+  const getPaymentStatusText = (member: Member, isPaid: boolean) => {
     if (member.isCore) {
       // Core member logic
-      if (extraAmount > 0) {
+      if (isPaid) {
         return (
           <span className="flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            Còn phí phát sinh
+            <Check className="h-3 w-3" />
+            Thành viên cứng
           </span>
         );
       } else {
@@ -79,18 +74,12 @@ export const CalendarDayParticipants: React.FC<
 
         const participantCount = getParticipantCount(day, memberId);
         const isPaid = day.paidMembers.includes(memberId) || member.isCore;
-
-        // Calculate extra expenses for core members
-        const extraAmount = member.isCore
-          ? calculateExtraExpensesPayment(day, memberId)
-          : 0;
+        const paymentAmount = calculatePaymentAmount(day, memberId, members);
 
         // Determine badge color and style based on payment status
         const getBadgeStyle = () => {
           if (member.isCore) {
-            return extraAmount > 0
-              ? "bg-amber-50 border border-amber-200 text-amber-700"
-              : "bg-green-50 border border-green-200 text-green-700";
+            return "bg-green-50 border border-green-200 text-green-700";
           } else {
             return isPaid
               ? "bg-green-50 border border-green-200 text-green-700"
@@ -115,14 +104,12 @@ export const CalendarDayParticipants: React.FC<
                         name={member.name}
                         imageUrl={member.avatarUrl}
                         size="sm"
-                        className={isPaid && !extraAmount ? "opacity-80" : ""}
+                        className={isPaid ? "opacity-80" : ""}
                       />
                       {participantCount > 1 && (
                         <Badge
                           className="absolute -top-2 -right-2 h-4 w-4 p-0 flex items-center justify-center text-[10px]"
-                          variant={
-                            isPaid && !extraAmount ? "default" : "secondary"
-                          }
+                          variant={isPaid ? "default" : "secondary"}
                         >
                           {participantCount}
                         </Badge>
@@ -135,18 +122,16 @@ export const CalendarDayParticipants: React.FC<
                             {member.name}
                           </span>
                           <span className="text-xs">
-                            {getPaymentStatusText(member, isPaid, extraAmount)}
+                            {getPaymentStatusText(member, isPaid)}
                           </span>
                         </div>
-                        <div
-                          className={`text-xs font-medium rounded-full px-2 py-1`}
-                        >
-                          {member.isCore && extraAmount > 0
-                            ? formatCurrency(extraAmount)
-                            : formatCurrency(
-                                calculatePaymentAmount(day, memberId, members)
-                              )}
-                        </div>
+                        {paymentAmount > 0 && (
+                          <div
+                            className={`text-xs font-medium rounded-full px-2 py-1`}
+                          >
+                            {formatCurrency(paymentAmount)}
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="ml-1 flex-1 overflow-hidden">
@@ -159,7 +144,6 @@ export const CalendarDayParticipants: React.FC<
                             : isPaid
                             ? "Đã TT"
                             : "Chưa TT"}
-                          {member.isCore && extraAmount > 0 ? " (còn phí)" : ""}
                         </span>
                       </div>
                     )}
@@ -172,11 +156,9 @@ export const CalendarDayParticipants: React.FC<
                     {member.name}
                     {participantCount > 1 ? ` (${participantCount} người)` : ""}
                     <br />
-                    {member.isCore && extraAmount > 0
-                      ? `Còn phí phát sinh: ${formatCurrency(extraAmount)}`
-                      : formatCurrency(
-                          calculatePaymentAmount(day, memberId, members)
-                        )}
+                    {formatCurrency(
+                      calculatePaymentAmount(day, memberId, members)
+                    )}
                   </p>
                 </TooltipContent>
               )}

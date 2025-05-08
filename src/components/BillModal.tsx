@@ -9,7 +9,6 @@ import {
   getTotalExtraExpenses,
   getTotalParticipantsInDay,
   calculatePaymentAmount,
-  calculateExtraExpensesPayment,
 } from "@/utils/schedulerUtils";
 import {
   Dialog,
@@ -229,20 +228,11 @@ export const BillModal: React.FC<BillModalProps> = ({
                 const participantCount = getParticipantCount(day, memberId);
                 const isCore = memberData.isCore;
 
-                // If core member, only show extra expenses payment
-                const extraAmount = isCore
-                  ? calculateExtraExpensesPayment(day, memberId)
-                  : 0;
-
                 const paymentAmount = isCore
-                  ? extraAmount > 0
-                    ? extraAmount
-                    : 0
+                  ? 0
                   : calculatePaymentAmount(day, memberId);
 
-                const hasPaid = isCore
-                  ? extraAmount <= 0
-                  : day.paidMembers.includes(memberId);
+                const hasPaid = isCore || day.paidMembers.includes(memberId);
 
                 return (
                   <div
@@ -266,7 +256,7 @@ export const BillModal: React.FC<BillModalProps> = ({
                           paymentAmount < 0 ? "text-green-600" : ""
                         } font-medium`}
                       >
-                        {isCore && extraAmount <= 0
+                        {isCore
                           ? "Miễn phí sân"
                           : formatCurrency(paymentAmount)}
                       </span>
@@ -279,7 +269,7 @@ export const BillModal: React.FC<BillModalProps> = ({
                           ({hasPaid ? "Đã TT" : "Chưa TT"})
                         </span>
                       )}
-                      {isCore && extraAmount > 0 && (
+                      {isCore && (
                         <span className="text-xs ml-1 text-amber-600">
                           (Còn phí phát sinh)
                         </span>

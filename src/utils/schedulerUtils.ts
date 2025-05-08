@@ -1,4 +1,3 @@
-
 export interface Member {
   id: string;
   name: string;
@@ -110,7 +109,7 @@ export const calculateCostPerPerson = (
   let totalCost = 0;
 
   // Check if user is a core member
-  const isCoreUser = allMembers 
+  const isCoreUser = allMembers
     ? allMembers.find((m) => m.id === memberId)?.isCore
     : false;
 
@@ -118,7 +117,7 @@ export const calculateCostPerPerson = (
     if (day.members.includes(memberId)) {
       const participantCount = getParticipantCount(day, memberId);
       totalDays += participantCount;
-      
+
       // Core members don't pay
       if (!isCoreUser) {
         const costForDay = calculatePaymentAmount(day, memberId);
@@ -194,7 +193,3 @@ export const calculatePaymentAmount = (
 
   return courtCost + extraCost - userExpensesContribution;
 };
-
-// Remove the calculateExtraExpensesPayment function as it's no longer needed
-
-// Remove the hasRemainingExtraExpenses function as it's no longer needed
