@@ -16,16 +16,20 @@ import {
 } from "@/components/ui/tooltip";
 import ClickableAvatar from "@/components/ClickableAvatar";
 import { useIsMobile } from "@/hooks/use-mobile";
+import PaymentStatus from "./PaymentStatus";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface CalendarDayParticipantsProps {
   day: CalendarDay;
   members: Member[];
+  onUpdateDay: (day: CalendarDay) => void;
 }
 
 export const CalendarDayParticipants: React.FC<
   CalendarDayParticipantsProps
-> = ({ day, members }) => {
+> = ({ day, members, onUpdateDay }) => {
   const isMobile = useIsMobile();
+  const { user } = useAuth();
 
   // Helper to determine payment status text
   const getPaymentStatusText = (member: Member, isPaid: boolean) => {
@@ -74,7 +78,6 @@ export const CalendarDayParticipants: React.FC<
 
         const participantCount = getParticipantCount(day, memberId);
         const isPaid = day.paidMembers.includes(memberId) || member.isCore;
-        const paymentAmount = calculatePaymentAmount(day, memberId, members);
 
         // Determine badge color and style based on payment status
         const getBadgeStyle = () => {
@@ -125,12 +128,8 @@ export const CalendarDayParticipants: React.FC<
                             {getPaymentStatusText(member, isPaid)}
                           </span>
                         </div>
-                        {paymentAmount > 0 && (
-                          <div
-                            className={`text-xs font-medium rounded-full px-2 py-1`}
-                          >
-                            {formatCurrency(paymentAmount)}
-                          </div>
+                        {memberId === user?.id && (
+                          <PaymentStatus day={day} onUpdateDay={onUpdateDay} />
                         )}
                       </>
                     ) : (

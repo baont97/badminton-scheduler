@@ -1,17 +1,12 @@
-
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  CalendarDay,
-  calculatePaymentAmount,
-  formatCurrency,
-} from "@/utils/schedulerUtils";
+import { CalendarDay, calculatePaymentAmount } from "@/utils/schedulerUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import MomoPaymentButton from "@/components/MomoPaymentButton";
 import { markPaymentStatus } from "@/utils/api/participantApi";
 import { toast } from "sonner";
-import { Check, Clock } from "lucide-react";
+import { Check } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -50,30 +45,7 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
       <div className="flex items-center justify-between">
         <Badge className="bg-green-500 hover:bg-green-600 flex items-center gap-1.5">
           <Check className="h-3 w-3" />
-          Đã thanh toán (thành viên cứng)
         </Badge>
-
-        {isAdmin && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() => {
-                    // TODO: Add logic to mark as unpaid
-                  }}
-                >
-                  Hủy TT
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Hủy trạng thái thanh toán</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
       </div>
     );
   }
@@ -89,28 +61,6 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
           <Check className="h-3 w-3" />
           Đã thanh toán
         </Badge>
-
-        {isAdmin && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() => {
-                    // TODO: Add logic to mark as unpaid
-                  }}
-                >
-                  Hủy TT
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Hủy trạng thái thanh toán</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
       </div>
     );
   }
@@ -153,48 +103,38 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
 
   // Show payment controls if payment is needed
   return (
-    <div className="flex items-center justify-between gap-2">
-      <Badge
-        variant="outline"
-        className="bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1.5"
-      >
-        <Clock className="h-3 w-3" />
-        Chưa thanh toán
-      </Badge>
+    <div className="flex items-center gap-1">
+      {/* Only show MoMo payment button if day.can_pay is true */}
+      {day.can_pay && (
+        <MomoPaymentButton
+          dayId={day.id}
+          dayDate={day.date}
+          amount={amountToPay}
+          onPaymentSuccess={handlePaymentSuccess}
+        />
+      )}
 
-      <div className="flex items-center gap-1">
-        {/* Only show MoMo payment button if day.can_pay is true */}
-        {day.can_pay && (
-          <MomoPaymentButton
-            dayId={day.id}
-            dayDate={day.date}
-            amount={amountToPay}
-            onPaymentSuccess={handlePaymentSuccess}
-          />
-        )}
-
-        {/* Admin can mark as paid manually */}
-        {isAdmin && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="border-green-500 text-green-500 hover:bg-green-50"
-                  onClick={handleMarkAsPaid}
-                  disabled={loading}
-                >
-                  <Check className="h-4 w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Đánh dấu đã thanh toán</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
+      {/* Admin can mark as paid manually */}
+      {isAdmin && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                className="border-green-500 text-green-500 hover:bg-green-50"
+                onClick={handleMarkAsPaid}
+                disabled={loading}
+              >
+                <Check className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Đánh dấu đã thanh toán</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
     </div>
   );
 };

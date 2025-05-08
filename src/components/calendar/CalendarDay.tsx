@@ -1,4 +1,3 @@
-
 // src/components/calendar/CalendarDay.tsx
 import React, { useState } from "react";
 import {
@@ -64,9 +63,10 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
 
   // Determine if user is a core member
   const isCoreUser = profile?.is_core === true;
-  
+
   // Core members are always considered paid
-  const hasPaid = isParticipating && (day.paidMembers.includes(user?.id || "") || isCoreUser);
+  const hasPaid =
+    isParticipating && (day.paidMembers.includes(user?.id || "") || isCoreUser);
 
   const isPastGame = isAfterGameTimeWithBuffer(day.date, day.sessionTime);
   const nearGameTime = isWithinOneHourOfSession(day);
@@ -94,7 +94,9 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
         if (!isParticipating && isCoreUser) {
           updatedPaidMembers = [...updatedPaidMembers, user.id];
         } else if (isParticipating) {
-          updatedPaidMembers = updatedPaidMembers.filter(id => id !== user.id);
+          updatedPaidMembers = updatedPaidMembers.filter(
+            (id) => id !== user.id
+          );
         }
 
         onUpdateDay({
@@ -105,7 +107,7 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
           slots: isParticipating
             ? day.slots.filter((slot) => slot[0] !== user.id)
             : [...day.slots, [user.id, 1]],
-          paidMembers: updatedPaidMembers
+          paidMembers: updatedPaidMembers,
         });
 
         toast.success(
@@ -209,7 +211,11 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
 
         {day.members.length > 0 && (
           <div className="mt-4">
-            <CalendarDayParticipants day={day} members={members} />
+            <CalendarDayParticipants
+              day={day}
+              members={members}
+              onUpdateDay={onUpdateDay}
+            />
             <ExtraExpenseForm day={day} onUpdateDay={onUpdateDay} />
           </div>
         )}
