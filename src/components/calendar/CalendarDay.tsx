@@ -1,3 +1,4 @@
+
 // src/components/calendar/CalendarDay.tsx
 import React, { useState } from "react";
 import {
@@ -59,8 +60,13 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
   loading,
 }) => {
   const [loadingAttendance, setLoadingAttendance] = useState(false);
-  const { user, profile, isAdmin, isParticipating, hasPaid } =
-    useCalendarDayUser(day);
+  const { user, profile, isAdmin, isParticipating } = useCalendarDayUser(day);
+
+  // Determine if user is a core member
+  const isCoreUser = profile?.is_core === true;
+  
+  // Core members are always considered paid
+  const hasPaid = isParticipating && (day.paidMembers.includes(user?.id || "") || isCoreUser);
 
   const isPastGame = isAfterGameTimeWithBuffer(day.date, day.sessionTime);
   const nearGameTime = isWithinOneHourOfSession(day);
@@ -83,6 +89,14 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
 
       const result = await toggleAttendance(day.id, user.id, isParticipating);
       if (result.success) {
+        // If user is a core member and they're joining, add them to paidMembers too
+        let updatedPaidMembers = day.paidMembers;
+        if (!isParticipating && isCoreUser) {
+          updatedPaidMembers = [...updatedPaidMembers, user.id];
+        } else if (isParticipating) {
+          updatedPaidMembers = updatedPaidMembers.filter(id => id !== user.id);
+        }
+
         onUpdateDay({
           ...day,
           members: isParticipating
@@ -91,6 +105,7 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
           slots: isParticipating
             ? day.slots.filter((slot) => slot[0] !== user.id)
             : [...day.slots, [user.id, 1]],
+          paidMembers: updatedPaidMembers
         });
 
         toast.success(

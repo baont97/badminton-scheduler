@@ -1,3 +1,4 @@
+
 export interface Member {
   id: string;
   name: string;
@@ -102,22 +103,27 @@ export const getMemberExpensesCredit = (
 
 export const calculateCostPerPerson = (
   days: CalendarDay[],
-  memberId: string
+  memberId: string,
+  allMembers?: Member[]
 ): { totalDays: number; totalCost: number } => {
   let totalDays = 0;
   let totalCost = 0;
-  let totalExpensesCredit = 0;
+
+  // Check if user is a core member
+  const isCoreUser = allMembers 
+    ? allMembers.find((m) => m.id === memberId)?.isCore
+    : false;
 
   days.forEach((day) => {
     if (day.members.includes(memberId)) {
       const participantCount = getParticipantCount(day, memberId);
       totalDays += participantCount;
-
-      const costForDay = calculatePaymentAmount(day, memberId);
-      totalCost += costForDay;
-
-      const expensesCredit = getMemberExpensesCredit(day, memberId);
-      totalExpensesCredit += expensesCredit;
+      
+      // Core members don't pay
+      if (!isCoreUser) {
+        const costForDay = calculatePaymentAmount(day, memberId);
+        totalCost += costForDay;
+      }
     }
   });
 
@@ -150,7 +156,7 @@ export const isAllMembersPaid = (
 
 /**
  * Calculate the payment amount for a member
- * UPDATED: For core members, only charge them for extra expenses portion
+ * Core members don't pay anything
  */
 export const calculatePaymentAmount = (
   day: CalendarDay,
@@ -160,6 +166,9 @@ export const calculatePaymentAmount = (
   const isCoreUser = allMembers
     ? allMembers.find((m) => m.id === memberId)?.isCore
     : false;
+
+  // Core members don't pay
+  if (isCoreUser) return 0;
 
   const totalParticipants = getTotalParticipantsInDay(day);
   if (totalParticipants === 0) return 0;
@@ -175,56 +184,17 @@ export const calculatePaymentAmount = (
   const totalExtraExpenses = getTotalExtraExpenses(day);
   const extraExpensesPerPerson = totalExtraExpenses / totalParticipants;
 
-  // For core members, they don't pay for the court fees, only for their share of extras
-  if (isCoreUser) {
-    const userExpensesContribution = getMemberExpensesCredit(day, memberId);
-    const extraExpensesShare = extraExpensesPerPerson * participantCount;
+  // Regular members pay for court fees and extras
+  const costPerSlot = totalSessionCost / totalParticipants;
+  const courtCost = costPerSlot * participantCount;
+  const extraCost = extraExpensesPerPerson * participantCount;
 
-    // If user has contributed more than their share, return a negative amount (credit)
-    return extraExpensesShare - userExpensesContribution;
-  } else {
-    // Regular members pay for court fees and extras
-    const costPerSlot = totalSessionCost / totalParticipants;
-    const courtCost = costPerSlot * participantCount;
-    const extraCost = extraExpensesPerPerson * participantCount;
-
-    // Subtract user's own expense contributions
-    const userExpensesContribution = getMemberExpensesCredit(day, memberId);
-
-    return courtCost + extraCost - userExpensesContribution;
-  }
-};
-
-/**
- * Calculate only the extra expenses portion a member needs to pay
- * This is useful for core members who only need to pay for extras
- */
-export const calculateExtraExpensesPayment = (
-  day: CalendarDay,
-  memberId: string
-): number => {
-  const totalParticipants = getTotalParticipantsInDay(day);
-  if (totalParticipants === 0) return 0;
-
-  const participantCount = getParticipantCount(day, memberId);
-  const totalExtraExpenses = getTotalExtraExpenses(day);
-  const extraExpensesPerPerson = totalExtraExpenses / totalParticipants;
-  const extraExpensesShare = extraExpensesPerPerson * participantCount;
-
-  // Subtract user's expense contributions
+  // Subtract user's own expense contributions
   const userExpensesContribution = getMemberExpensesCredit(day, memberId);
 
-  // Return the remaining amount to pay for extras
-  // If it's negative, user has paid more than their share
-  return extraExpensesShare - userExpensesContribution;
+  return courtCost + extraCost - userExpensesContribution;
 };
 
-/**
- * Determine if a member has remaining payments needed for extra expenses
- */
-export const hasRemainingExtraExpenses = (
-  day: CalendarDay,
-  memberId: string
-): boolean => {
-  return calculateExtraExpensesPayment(day, memberId) > 0;
-};
+// Remove the calculateExtraExpensesPayment function as it's no longer needed
+
+// Remove the hasRemainingExtraExpenses function as it's no longer needed

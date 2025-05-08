@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   CalendarDay,
@@ -6,17 +7,10 @@ import {
   formatCurrency,
   getTotalExtraExpenses,
   getMemberExpensesCredit,
-  calculateExtraExpensesPayment,
 } from "@/utils/schedulerUtils";
 import { Badge } from "@/components/ui/badge";
 import ClickableAvatar from "@/components/ClickableAvatar";
-import { Coins, AlertCircle } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Coins } from "lucide-react";
 
 interface StatisticsTableProps {
   days: CalendarDay[];
@@ -38,19 +32,6 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
     );
   };
 
-  // Calculate if a core member has remaining expenses to pay across all days
-  const calculateRemainingExtraExpenses = (member: Member): number => {
-    if (!member.isCore) return 0;
-
-    return days.reduce((total, day) => {
-      if (day.members.includes(member.id)) {
-        const extraAmount = calculateExtraExpensesPayment(day, member.id);
-        return total + (extraAmount > 0 ? extraAmount : 0);
-      }
-      return total;
-    }, 0);
-  };
-
   return (
     <div className="glass-card p-3 sm:p-6 animate-slide-up">
       <h2 className="text-lg font-medium mb-4 sm:mb-6 text-center">
@@ -62,12 +43,12 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
         {members.map((member) => {
           const { totalDays, totalCost } = calculateCostPerPerson(
             days,
-            member.id
+            member.id,
+            members
           );
           const expensesContribution = calculateMemberExpensesContribution(
             member.id
           );
-          const remainingExtra = calculateRemainingExtraExpenses(member);
 
           return (
             <div
@@ -94,11 +75,6 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
                           Thành viên
                         </span>
                       )}
-                      {member.isCore && remainingExtra > 0 && (
-                        <Badge className="ml-1 bg-amber-500 text-white border-none text-xs">
-                          Còn phí phát sinh
-                        </Badge>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -111,9 +87,7 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
                       totalCost < 0 ? "text-green-600" : ""
                     }`}
                   >
-                    {formatCurrency(
-                      member.isCore && remainingExtra === 0 ? 0 : totalCost
-                    )}
+                    {formatCurrency(member.isCore ? 0 : totalCost)}
                   </span>
                 </div>
               </div>
@@ -160,12 +134,12 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
             {members.map((member) => {
               const { totalDays, totalCost } = calculateCostPerPerson(
                 days,
-                member.id
+                member.id,
+                members
               );
               const expensesContribution = calculateMemberExpensesContribution(
                 member.id
               );
-              const remainingExtra = calculateRemainingExtraExpenses(member);
 
               return (
                 <tr
@@ -194,24 +168,6 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
                           Thành viên
                         </span>
                       )}
-                      {member.isCore && remainingExtra > 0 && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Badge className="bg-amber-500 text-white border-none flex items-center gap-1">
-                                <AlertCircle className="h-3 w-3" />
-                                Còn phí
-                              </Badge>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>
-                                Còn phí phát sinh:{" "}
-                                {formatCurrency(remainingExtra)}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
                     </div>
                   </td>
                   <td className="py-4 text-center">
@@ -235,17 +191,11 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
                         totalCost < 0 ? "text-green-600" : ""
                       }`}
                     >
-                      {formatCurrency(
-                        member.isCore && remainingExtra === 0 ? 0 : totalCost
-                      )}
+                      {formatCurrency(member.isCore ? 0 : totalCost)}
                     </span>
                     {member.isCore && (
                       <div className="text-xs text-muted-foreground">
-                        {remainingExtra > 0
-                          ? `Còn phí phát sinh: ${formatCurrency(
-                              remainingExtra
-                            )}`
-                          : "Đã thanh toán đủ"}
+                        Thành viên cứng được miễn phí
                       </div>
                     )}
                   </td>
@@ -274,9 +224,8 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
 
       <div className="mt-3 sm:mt-4 text-xs text-muted-foreground">
         <p className="text-center">
-          Thành viên cứng được miễn phí sân, chỉ thanh toán phần chi phí phát
-          sinh. Người nhập chi phí phát sinh sẽ được trừ vào phần chi phí phải
-          trả.
+          Thành viên cứng được miễn phí sân và chi phí phát sinh.
+          Người nhập chi phí phát sinh sẽ được trừ vào phần chi phí phải trả.
         </p>
       </div>
     </div>

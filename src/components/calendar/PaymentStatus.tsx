@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -5,10 +6,6 @@ import {
   CalendarDay,
   calculatePaymentAmount,
   formatCurrency,
-  getParticipantCount,
-  getTotalExtraExpenses,
-  getTotalParticipantsInDay,
-  getMemberExpensesCredit,
 } from "@/utils/schedulerUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import MomoPaymentButton from "@/components/MomoPaymentButton";
@@ -25,34 +22,6 @@ import {
 interface PaymentStatusProps {
   day: CalendarDay;
   onUpdateDay: (day: CalendarDay) => void;
-}
-
-/**
- * Calculate the amount a core member needs to pay for extra expenses only
- */
-function calculateCoreUserExtraPayment(
-  day: CalendarDay,
-  userId: string
-): number {
-  if (!day.extraExpenses || day.extraExpenses.length === 0) return 0;
-
-  // Calculate user's share of extra expenses
-  const totalParticipants = getTotalParticipantsInDay(day);
-  if (totalParticipants === 0) return 0;
-
-  const participantCount = getParticipantCount(day, userId);
-  const totalExtraExpenses = getTotalExtraExpenses(day);
-  const extraExpensesPerPerson = totalExtraExpenses / totalParticipants;
-  const userExtraShare = extraExpensesPerPerson * participantCount;
-
-  // Calculate user's expenses contribution (credit)
-  const expensesCredit = getMemberExpensesCredit(day, userId);
-
-  // If user contributed more than their share, nothing to pay
-  if (expensesCredit >= userExtraShare) return 0;
-
-  // Otherwise, return the difference
-  return userExtraShare - expensesCredit;
 }
 
 export const PaymentStatus: React.FC<PaymentStatusProps> = ({
@@ -75,16 +44,76 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
   // Check if already paid
   const hasPaid = day.paidMembers.includes(user.id);
 
-  // For core members: calculate only the extra expenses they need to pay
-  // For regular members: calculate the full amount (court fee + extras)
-  const amountToPay = isCore
-    ? calculateCoreUserExtraPayment(day, user.id)
-    : calculatePaymentAmount(day, user.id);
+  // Core members are always marked as paid
+  if (isCore) {
+    return (
+      <div className="flex items-center justify-between">
+        <Badge className="bg-green-500 hover:bg-green-600 flex items-center gap-1.5">
+          <Check className="h-3 w-3" />
+          Đã thanh toán (thành viên cứng)
+        </Badge>
 
-  // Determine if payment is required
-  const needsPayment = isCore
-    ? amountToPay > 0 // Core members need to pay only if they have extra expenses share
-    : !hasPaid; // Regular members need to pay if not marked as paid
+        {isAdmin && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => {
+                    // TODO: Add logic to mark as unpaid
+                  }}
+                >
+                  Hủy TT
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Hủy trạng thái thanh toán</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
+    );
+  }
+
+  // For regular members: calculate the full amount (court fee + extras)
+  const amountToPay = calculatePaymentAmount(day, user.id);
+
+  // If already paid, show appropriate status
+  if (hasPaid) {
+    return (
+      <div className="flex items-center justify-between">
+        <Badge className="bg-green-500 hover:bg-green-600 flex items-center gap-1.5">
+          <Check className="h-3 w-3" />
+          Đã thanh toán
+        </Badge>
+
+        {isAdmin && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7"
+                  onClick={() => {
+                    // TODO: Add logic to mark as unpaid
+                  }}
+                >
+                  Hủy TT
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Hủy trạng thái thanh toán</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+      </div>
+    );
+  }
 
   // Handle manual payment marking (admin only)
   const handleMarkAsPaid = async () => {
@@ -122,40 +151,6 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
     });
   };
 
-  // If payment is not needed, show appropriate status
-  if (!needsPayment) {
-    return (
-      <div className="flex items-center justify-between">
-        <Badge className="bg-green-500 hover:bg-green-600 flex items-center gap-1.5">
-          <Check className="h-3 w-3" />
-          {isCore ? "Đã thanh toán (thành viên cứng)" : "Đã thanh toán"}
-        </Badge>
-
-        {isAdmin && (
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-xs h-7"
-                  onClick={() => {
-                    // TODO: Add logic to mark as unpaid
-                  }}
-                >
-                  Hủy TT
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Hủy trạng thái thanh toán</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        )}
-      </div>
-    );
-  }
-
   // Show payment controls if payment is needed
   return (
     <div className="flex items-center justify-between gap-2">
@@ -164,9 +159,7 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
         className="bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1.5"
       >
         <Clock className="h-3 w-3" />
-        {isCore
-          ? `Còn phí phát sinh: ${formatCurrency(amountToPay)}`
-          : "Chưa thanh toán"}
+        Chưa thanh toán
       </Badge>
 
       <div className="flex items-center gap-1">
