@@ -20,6 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ExtraExpenseFormProps {
   day: CalendarDay;
@@ -176,15 +182,24 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
           Chi phí phát sinh:
         </h3>
         {!showForm && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs border-badminton text-badminton hover:bg-badminton/10"
-            onClick={() => setShowForm(true)}
-          >
-            <PlusCircle className="h-3.5 w-3.5 mr-1" />
-            Thêm
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs border-badminton text-badminton hover:bg-badminton/10"
+                  onClick={() => setShowForm(true)}
+                >
+                  <PlusCircle className="h-3.5 w-3.5 mr-1" />
+                  Thêm
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Thêm chi phí phát sinh</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </div>
 
@@ -259,16 +274,25 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
                     {formatCurrency(expense.amount)}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 ml-2 text-destructive"
-                      onClick={() => handleDeleteExpense(expense.id, expense.userId)}
-                      disabled={loading || (user?.id !== expense.userId && !isAdmin)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span className="sr-only">Xóa</span>
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 ml-2 text-destructive"
+                            onClick={() => handleDeleteExpense(expense.id, expense.userId)}
+                            disabled={loading || (user?.id !== expense.userId && !isAdmin)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            <span className="sr-only">Xóa</span>
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Xóa chi phí</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
                 </TableRow>
               ))}
