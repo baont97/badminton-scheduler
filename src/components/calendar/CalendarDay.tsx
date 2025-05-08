@@ -1,21 +1,28 @@
-
-// src/components/calendar/CalendarDay.tsx
 import React, { useState } from "react";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Users, Clock, MapPin } from "lucide-react";
+import { Clock, MapPin, User, Receipt } from "lucide-react";
 import { toast } from "sonner";
-import { CalendarDayParticipants } from "./CalendarDayParticipants";
-import { CalendarAdminActions } from "./CalendarAdminActions";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   formatDate,
   getDayName,
   formatCurrency,
+  getTotalParticipantsInDay,
+  getParticipantCount,
   CalendarDay,
   Member,
-  getParticipantCount,
-  getTotalParticipantsInDay,
 } from "@/utils/schedulerUtils";
 import {
   isWithinOneHourOfSession,
@@ -23,13 +30,9 @@ import {
   getRemainingTime,
   isAfterGameTimeWithBuffer,
 } from "./utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { toggleAttendance } from "@/utils/api/participantApi";
+import { CalendarDayParticipants } from "./CalendarDayParticipants";
+import { CalendarAdminActions } from "./CalendarAdminActions";
 import ExtraExpenseForm from "../ExtraExpenseForm";
 import PaymentStatus from "./PaymentStatus";
 
@@ -53,27 +56,24 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
   loading,
 }) => {
   const [loadingAttendance, setLoadingAttendance] = useState(false);
-  const { user, profile, isAdmin, isParticipating, hasPaid } = useCalendarDayUser(day);
-  
+  const { user, isAdmin, isParticipating } = useCalendarDayUser(day);
+
   const isPastGame = isAfterGameTimeWithBuffer(day.date, day.sessionTime);
   const nearGameTime = isWithinOneHourOfSession(day);
   const remainingTime = getRemainingTime(day);
   const userCanJoin = day.isActive && user && (!isPastGame || isAdmin);
   const participantSlotCount = getParticipantCount(day, user?.id || "");
   const totalParticipants = getTotalParticipantsInDay(day);
-
-  // Calculate total session cost based on court count
-  const totalSessionCost = day.courtCount && day.courtCount > 1 
-    ? day.sessionCost * day.courtCount 
-    : day.sessionCost;
+  const sessionCost =
+    day.courtCount > 1 ? day.sessionCost * day.courtCount : day.sessionCost;
 
   const handleToggleAttendance = async () => {
     if (!user || loading) return;
 
     try {
       setLoadingAttendance(true);
-
       const result = await toggleAttendance(day.id, user.id, isParticipating);
+
       if (result.success) {
         onUpdateDay({
           ...day,
@@ -84,11 +84,8 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
             ? day.slots.filter((slot) => slot[0] !== user.id)
             : [...day.slots, [user.id, 1]],
         });
-
         toast.success(
-          isParticipating
-            ? "Đã hủy tham gia"
-            : "Đã đăng ký tham gia"
+          isParticipating ? "Đã hủy tham gia" : "Đã đăng ký tham gia"
         );
       } else if (result.error) {
         toast.error(result.error);
@@ -105,110 +102,115 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
     <Card
       className={`transition-all duration-300 ${
         !day.isActive ? "opacity-60" : ""
-      } ${dayIndex === 0 ? "mt-0" : ""}`}
+      }`}
     >
-      <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-        <div className="flex flex-col">
-          <div className="flex items-center space-x-2">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <h3 className="font-medium">
-              {getDayName(day.dayOfWeek)} {formatDate(day.date)}
-            </h3>
-          </div>
+      {/* Header Section */}
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          {/* Date and Status */}
+          <h1 className="text-lg font-bold">
+            {getDayName(day.dayOfWeek)} {formatDate(day.date)}
+          </h1>
+
           <div className="mt-1 flex flex-wrap gap-1">
-            {day.courtCount && day.courtCount > 1 && (
-              <Badge variant="outline" className="text-xs">
-                {day.courtCount} sân
-              </Badge>
-            )}
             {!day.isActive && (
               <Badge variant="destructive" className="text-xs">
                 Đã hủy
               </Badge>
             )}
             {nearGameTime && (
-              <Badge className="bg-yellow-500 text-white hover:bg-yellow-600 text-xs">
+              <Badge className="bg-yellow-500 text-white text-xs">
                 Sắp diễn ra ({remainingTime})
               </Badge>
             )}
           </div>
         </div>
-        <div className="text-right">
-          <div className="flex items-center justify-end space-x-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {totalParticipants}/{day.maxMembers}
+      </CardHeader>
+
+      {/* Content Section */}
+      <CardContent>
+        <div className="grid grid-flow-row gap-2">
+          {/* Participants Count */}
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span>
+              {totalParticipants}/{day.maxMembers} người
             </span>
           </div>
 
-          {/* Replace the old payment badge with the new PaymentStatus component */}
-          {isParticipating && user && (
-            <div className="mt-1">
-              <PaymentStatus day={day} onUpdateDay={onUpdateDay} />
-            </div>
-          )}
-        </div>
-      </CardHeader>
-
-      <CardContent className="pb-2">
-        <div className="grid gap-2">
-          <div className="flex items-start gap-2">
-            <Clock className="h-4 w-4 text-muted-foreground mt-0.5" />
+          {/* Session Time */}
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-muted-foreground" />
             <span>{day.sessionTime}</span>
           </div>
-          
+
+          {/* Location */}
           {day.location && (
-            <div className="flex items-start gap-2">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
-                <div className="font-medium text-sm">{day.location.name}</div>
-                {day.location.address && (
-                  <div className="text-muted-foreground text-xs">{day.location.address}</div>
-                )}
-              </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span>
+                {day.location.name} ({day.courtCount} sân)
+              </span>
             </div>
           )}
 
-          <div className="flex justify-between items-center text-sm pt-1">
-            <span className="text-muted-foreground">Giá: {formatCurrency(totalSessionCost)}</span>
+          {/* Price Information */}
+          <div>
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 text-muted-foreground" />
+              <span>{formatCurrency(sessionCost)}</span>
+            </div>
             {isParticipating && participantSlotCount > 1 && (
               <Badge variant="outline">x{participantSlotCount}</Badge>
             )}
           </div>
         </div>
 
+        {/* Payment Status - Show only if participating */}
+        {isParticipating && user && (
+          <div className="mt-2">
+            <PaymentStatus day={day} onUpdateDay={onUpdateDay} />
+          </div>
+        )}
+
+        {/* Participants and Expenses */}
         {day.members.length > 0 && (
-          <div className="mt-4">
-            <CalendarDayParticipants
-              day={day}
-              members={members}
-            />
+          <div className="mt-4 space-y-4">
+            <div className="pt-2 border-t">
+              <CalendarDayParticipants day={day} members={members} />
+            </div>
+            <div className="pt-2 border-t">
+              <ExtraExpenseForm day={day} onUpdateDay={onUpdateDay} />
+            </div>
           </div>
         )}
       </CardContent>
 
-      <CardFooter className="flex justify-between gap-2 pt-0">
+      {/* Actions Footer */}
+      <CardFooter className="flex flex-wrap sm:flex-nowrap justify-between gap-2 pt-0">
         {userCanJoin && (
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant={isParticipating ? "destructive" : "default"}
-                  className={`flex-1 ${isParticipating ? "" : "bg-badminton hover:bg-badminton/80"}`}
+                  className={`flex-1 ${
+                    isParticipating ? "" : "bg-badminton hover:bg-badminton/80"
+                  }`}
                   onClick={handleToggleAttendance}
                   disabled={loadingAttendance}
                 >
                   {loadingAttendance ? (
                     <span className="animate-spin">&#8635;</span>
                   ) : isParticipating ? (
-                    <span>✕</span>
+                    <span>Hủy tham gia</span>
                   ) : (
-                    <span>+</span>
+                    <span>Tham gia</span>
                   )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>{isParticipating ? "Hủy tham gia" : "Tham gia"}</p>
+                <p>{isParticipating ? "Hủy tham gia" : "Tham gia buổi tập"}</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -223,11 +225,11 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
                   className="flex-1"
                   onClick={() => onOpenBill(day)}
                 >
-                  <span>&#9776;</span>
+                  <span>Chi tiết</span>
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
-                <p>Chi tiết</p>
+                <p>Xem hóa đơn chi tiết</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
