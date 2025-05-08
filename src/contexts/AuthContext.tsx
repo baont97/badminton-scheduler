@@ -4,9 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Profile } from "@/types/database";
 
+// Extended Profile interface to include is_core property
+interface ExtendedProfile extends Profile {
+  is_core?: boolean;
+}
+
 interface AuthContextProps {
   user: User | null;
-  profile: Profile | null;
+  profile: ExtendedProfile | null;
   loading: boolean;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -14,15 +19,19 @@ interface AuthContextProps {
 
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ExtendedProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     try {
       console.log("Fetching profile for user:", userId);
+
+      // First get the main profile data
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -34,8 +43,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      console.log("Profile data:", data);
-      setProfile(data);
+      // Then check if the user is a core member
+      const { data: coreData, error: coreError } = await supabase
+        .from("core_members")
+        .select("user_id")
+        .eq("user_id", userId)
+        .single();
+
+      // Create the extended profile with core member status
+      const extendedProfile: ExtendedProfile = {
+        ...data,
+        is_core: coreError ? false : true, // If there's no error, the user is a core member
+      };
+
+      console.log("Profile data:", extendedProfile);
+      setProfile(extendedProfile);
     } catch (error) {
       console.error("Error in fetchProfile:", error);
     }
@@ -43,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let isMounted = true;
-    
+
     // Create a timeout to prevent infinite loading and force logout on timeout
     const timeoutId = setTimeout(() => {
       if (isMounted && loading) {
@@ -52,51 +74,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(null);
         setProfile(null);
         setLoading(false);
-        toast.error("Không thể kết nối với hệ thống xác thực, vui lòng thử lại");
+        toast.error(
+          "Không thể kết nối với hệ thống xác thực, vui lòng thử lại"
+        );
       }
     }, 10000);
 
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, newSession) => {
-        console.log("Auth state changed:", event, !!newSession);
-        
-        if (!isMounted) return;
-        
-        setUser(newSession?.user ?? null);
-        
-        if (newSession?.user) {
-          await fetchProfile(newSession.user.id);
-        } else if (event === 'SIGNED_OUT') {
-          setProfile(null);
-        }
-        
-        // Ensure loading is set to false after auth state is updated
-        setLoading(false);
-        setInitialized(true);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+      console.log("Auth state changed:", event, !!newSession);
+
+      if (!isMounted) return;
+
+      setUser(newSession?.user ?? null);
+
+      if (newSession?.user) {
+        await fetchProfile(newSession.user.id);
+      } else if (event === "SIGNED_OUT") {
+        setProfile(null);
       }
-    );
+
+      // Ensure loading is set to false after auth state is updated
+      setLoading(false);
+      setInitialized(true);
+    });
 
     // THEN check for existing session
     const initializeAuth = async () => {
       try {
         console.log("Initializing auth...");
-        const { data: { session: existingSession }, error } = await supabase.auth.getSession();
-        
+        const {
+          data: { session: existingSession },
+          error,
+        } = await supabase.auth.getSession();
+
         if (!isMounted) return;
-        
+
         if (error) {
           console.error("Error getting session:", error);
           toast.error("Không thể kết nối với hệ thống xác thực");
           setLoading(false);
           return;
         }
-        
+
         console.log("Initial session check:", !!existingSession);
-        
+
         if (existingSession) {
           setUser(existingSession.user);
-          
+
           if (existingSession.user) {
             await fetchProfile(existingSession.user.id);
           }

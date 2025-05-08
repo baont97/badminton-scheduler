@@ -5,11 +5,18 @@ import {
   calculateCostPerPerson,
   formatCurrency,
   getTotalExtraExpenses,
-  getMemberExpensesCredit
+  getMemberExpensesCredit,
+  calculateExtraExpensesPayment,
 } from "@/utils/schedulerUtils";
 import { Badge } from "@/components/ui/badge";
 import ClickableAvatar from "@/components/ClickableAvatar";
-import { Coins } from "lucide-react";
+import { Coins, AlertCircle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface StatisticsTableProps {
   days: CalendarDay[];
@@ -19,7 +26,7 @@ interface StatisticsTableProps {
 const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
   // Calculate the total extra expenses for all days
   const totalExtraExpenses = days.reduce(
-    (total, day) => total + getTotalExtraExpenses(day), 
+    (total, day) => total + getTotalExtraExpenses(day),
     0
   );
 
@@ -31,16 +38,37 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
     );
   };
 
+  // Calculate if a core member has remaining expenses to pay across all days
+  const calculateRemainingExtraExpenses = (member: Member): number => {
+    if (!member.isCore) return 0;
+
+    return days.reduce((total, day) => {
+      if (day.members.includes(member.id)) {
+        const extraAmount = calculateExtraExpensesPayment(day, member.id);
+        return total + (extraAmount > 0 ? extraAmount : 0);
+      }
+      return total;
+    }, 0);
+  };
+
   return (
     <div className="glass-card p-3 sm:p-6 animate-slide-up">
-      <h2 className="text-lg font-medium mb-4 sm:mb-6 text-center">Thống kê chi phí</h2>
+      <h2 className="text-lg font-medium mb-4 sm:mb-6 text-center">
+        Thống kê chi phí
+      </h2>
 
       {/* Mobile view */}
       <div className="block sm:hidden space-y-4">
         {members.map((member) => {
-          const { totalDays, totalCost } = calculateCostPerPerson(days, member.id);
-          const expensesContribution = calculateMemberExpensesContribution(member.id);
-          
+          const { totalDays, totalCost } = calculateCostPerPerson(
+            days,
+            member.id
+          );
+          const expensesContribution = calculateMemberExpensesContribution(
+            member.id
+          );
+          const remainingExtra = calculateRemainingExtraExpenses(member);
+
           return (
             <div
               key={member.id}
@@ -66,17 +94,30 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
                           Thành viên
                         </span>
                       )}
+                      {member.isCore && remainingExtra > 0 && (
+                        <Badge className="ml-1 bg-amber-500 text-white border-none text-xs">
+                          Còn phí phát sinh
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-muted-foreground">Tổng chi phí</div>
-                  <span className={`font-medium ${totalCost < 0 ? 'text-green-600' : ''}`}>
-                    {formatCurrency(totalCost)}
+                  <div className="text-sm text-muted-foreground">
+                    Tổng chi phí
+                  </div>
+                  <span
+                    className={`font-medium ${
+                      totalCost < 0 ? "text-green-600" : ""
+                    }`}
+                  >
+                    {formatCurrency(
+                      member.isCore && remainingExtra === 0 ? 0 : totalCost
+                    )}
                   </span>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <div className="text-muted-foreground">Số buổi tham gia</div>
@@ -109,15 +150,23 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
               <th className="text-left pb-3 font-medium">Thành viên</th>
               <th className="text-center pb-3 font-medium">Trạng thái</th>
               <th className="text-center pb-3 font-medium">Số buổi tham gia</th>
-              <th className="text-center pb-3 font-medium">Chi phí phát sinh</th>
+              <th className="text-center pb-3 font-medium">
+                Chi phí phát sinh
+              </th>
               <th className="text-right pb-3 font-medium">Tổng chi phí</th>
             </tr>
           </thead>
           <tbody>
             {members.map((member) => {
-              const { totalDays, totalCost } = calculateCostPerPerson(days, member.id);
-              const expensesContribution = calculateMemberExpensesContribution(member.id);
-              
+              const { totalDays, totalCost } = calculateCostPerPerson(
+                days,
+                member.id
+              );
+              const expensesContribution = calculateMemberExpensesContribution(
+                member.id
+              );
+              const remainingExtra = calculateRemainingExtraExpenses(member);
+
               return (
                 <tr
                   key={member.id}
@@ -135,15 +184,35 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
                     </div>
                   </td>
                   <td className="py-4 text-center">
-                    {member.isCore ? (
-                      <Badge className="bg-badminton text-white border-none">
-                        CỨNG
-                      </Badge>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        Thành viên
-                      </span>
-                    )}
+                    <div className="flex flex-col items-center gap-1">
+                      {member.isCore ? (
+                        <Badge className="bg-badminton text-white border-none">
+                          CỨNG
+                        </Badge>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          Thành viên
+                        </span>
+                      )}
+                      {member.isCore && remainingExtra > 0 && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Badge className="bg-amber-500 text-white border-none flex items-center gap-1">
+                                <AlertCircle className="h-3 w-3" />
+                                Còn phí
+                              </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                Còn phí phát sinh:{" "}
+                                {formatCurrency(remainingExtra)}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                   </td>
                   <td className="py-4 text-center">
                     <span className="font-medium">{totalDays}</span> buổi
@@ -161,9 +230,24 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
                     )}
                   </td>
                   <td className="py-4 text-right">
-                    <span className={`font-medium ${totalCost < 0 ? 'text-green-600' : ''}`}>
-                      {formatCurrency(totalCost)}
+                    <span
+                      className={`font-medium ${
+                        totalCost < 0 ? "text-green-600" : ""
+                      }`}
+                    >
+                      {formatCurrency(
+                        member.isCore && remainingExtra === 0 ? 0 : totalCost
+                      )}
                     </span>
+                    {member.isCore && (
+                      <div className="text-xs text-muted-foreground">
+                        {remainingExtra > 0
+                          ? `Còn phí phát sinh: ${formatCurrency(
+                              remainingExtra
+                            )}`
+                          : "Đã thanh toán đủ"}
+                      </div>
+                    )}
                   </td>
                 </tr>
               );
@@ -180,15 +264,19 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
         </p>
         {totalExtraExpenses > 0 && (
           <p className="text-sm text-center mt-1 text-badminton-dark">
-            Tổng chi phí phát sinh: <span className="font-bold">{formatCurrency(totalExtraExpenses)}</span>
+            Tổng chi phí phát sinh:{" "}
+            <span className="font-bold">
+              {formatCurrency(totalExtraExpenses)}
+            </span>
           </p>
         )}
       </div>
-      
+
       <div className="mt-3 sm:mt-4 text-xs text-muted-foreground">
         <p className="text-center">
-          Người nhập chi phí phát sinh sẽ được trừ vào phần chi phí phải trả.
-          Nếu chi phí hiện số âm, người đó sẽ được nhận lại số tiền dư.
+          Thành viên cứng được miễn phí sân, chỉ thanh toán phần chi phí phát
+          sinh. Người nhập chi phí phát sinh sẽ được trừ vào phần chi phí phải
+          trả.
         </p>
       </div>
     </div>

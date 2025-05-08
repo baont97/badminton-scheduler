@@ -17,12 +17,21 @@ import {
   getParticipantCount,
   getTotalParticipantsInDay,
 } from "@/utils/schedulerUtils";
-import { toggleDayPaymentStatus } from "@/utils/api";
-import { isWithinOneHourOfSession, useCalendarDayUser, getRemainingTime, isAfterGameTimeWithBuffer } from "./utils";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-
-// Import the correct toggleAttendance function
+import {
+  isWithinOneHourOfSession,
+  useCalendarDayUser,
+  getRemainingTime,
+  isAfterGameTimeWithBuffer,
+} from "./utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { toggleAttendance } from "@/utils/api/participantApi";
+import ExtraExpenseForm from "../ExtraExpenseForm";
+import PaymentStatus from "./PaymentStatus";
 
 interface CalendarDayProps {
   day: CalendarDay;
@@ -132,14 +141,11 @@ export const CalendarDayComponent: React.FC<CalendarDayProps> = ({
             </span>
           </div>
 
-          {isParticipating && (
-            <Badge
-              className={`mt-1 ${
-                hasPaid ? "bg-green-500 hover:bg-green-600" : "bg-amber-500 hover:bg-amber-600"
-              }`}
-            >
-              {hasPaid ? "Đã thanh toán" : "Chưa thanh toán"}
-            </Badge>
+          {/* Replace the old payment badge with the new PaymentStatus component */}
+          {isParticipating && user && (
+            <div className="mt-1">
+              <PaymentStatus day={day} onUpdateDay={onUpdateDay} />
+            </div>
           )}
         </div>
       </CardHeader>

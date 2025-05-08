@@ -9,6 +9,7 @@ import {
   getTotalExtraExpenses,
   getTotalParticipantsInDay,
   calculatePaymentAmount,
+  calculateExtraExpensesPayment,
 } from "@/utils/schedulerUtils";
 import {
   Dialog,
@@ -226,9 +227,22 @@ export const BillModal: React.FC<BillModalProps> = ({
                 if (!memberData) return null;
 
                 const participantCount = getParticipantCount(day, memberId);
-                const paymentAmount = calculatePaymentAmount(day, memberId);
-                const hasPaid =
-                  day.paidMembers.includes(memberId) || memberData.isCore;
+                const isCore = memberData.isCore;
+
+                // If core member, only show extra expenses payment
+                const extraAmount = isCore
+                  ? calculateExtraExpensesPayment(day, memberId)
+                  : 0;
+
+                const paymentAmount = isCore
+                  ? extraAmount > 0
+                    ? extraAmount
+                    : 0
+                  : calculatePaymentAmount(day, memberId);
+
+                const hasPaid = isCore
+                  ? extraAmount <= 0
+                  : day.paidMembers.includes(memberId);
 
                 return (
                   <div
@@ -240,7 +254,7 @@ export const BillModal: React.FC<BillModalProps> = ({
                       {participantCount > 1
                         ? `${participantCount} người`
                         : "1 người"}
-                      {memberData.isCore && (
+                      {isCore && (
                         <span className="text-xs ml-1 text-badminton">
                           (Thành viên cứng)
                         </span>
@@ -252,20 +266,36 @@ export const BillModal: React.FC<BillModalProps> = ({
                           paymentAmount < 0 ? "text-green-600" : ""
                         } font-medium`}
                       >
-                        {formatCurrency(paymentAmount)}
+                        {isCore && extraAmount <= 0
+                          ? "Miễn phí sân"
+                          : formatCurrency(paymentAmount)}
                       </span>
-                      <span
-                        className={`text-xs ml-1 ${
-                          hasPaid ? "text-green-600" : "text-red-500"
-                        }`}
-                      >
-                        ({hasPaid ? "Đã TT" : "Chưa TT"})
-                      </span>
+                      {!isCore && (
+                        <span
+                          className={`text-xs ml-1 ${
+                            hasPaid ? "text-green-600" : "text-red-500"
+                          }`}
+                        >
+                          ({hasPaid ? "Đã TT" : "Chưa TT"})
+                        </span>
+                      )}
+                      {isCore && extraAmount > 0 && (
+                        <span className="text-xs ml-1 text-amber-600">
+                          (Còn phí phát sinh)
+                        </span>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
+          </div>
+
+          <div className="mt-6 text-sm text-center text-gray-800 bg-gray-100 p-2 rounded-md">
+            <p>
+              * Thành viên cứng được miễn phí sân, chỉ thanh toán chi phí phát
+              sinh.
+            </p>
           </div>
 
           <div className="mt-8 text-center text-xs text-gray-500">
