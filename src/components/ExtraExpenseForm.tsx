@@ -188,11 +188,11 @@ const ExtraExpenseForm = ({ day, onUpdateDay }: ExtraExpenseFormProps) => {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs border-badminton text-badminton hover:bg-badminton/10"
+                  className="text-xs border-badminton text-badminton hover:bg-badminton/10 w-full px-3"
                   onClick={() => setShowForm(true)}
                 >
                   <PlusCircle className="h-3.5 w-3.5 mr-1" />
-                  Thêm
+                  Thêm chi phí
                 </Button>
               </TooltipTrigger>
               <TooltipContent>
