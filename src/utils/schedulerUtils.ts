@@ -1,4 +1,3 @@
-
 // Update the import for ExtraExpense type
 
 export interface Member {
@@ -43,7 +42,15 @@ export interface CalendarDay {
 }
 
 export const getDayName = (dayOfWeek: number): string => {
-  const days = ["Chủ nhật", "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7"];
+  const days = [
+    "Chủ nhật",
+    "Thứ 2",
+    "Thứ 3",
+    "Thứ 4",
+    "Thứ 5",
+    "Thứ 6",
+    "Thứ 7",
+  ];
   return days[dayOfWeek];
 };
 
@@ -66,21 +73,32 @@ export const getTotalParticipantsInDay = (day: CalendarDay): number => {
   return day.slots.reduce((total, slot) => total + slot[1], 0);
 };
 
-export const getParticipantCount = (day: CalendarDay, memberId: string): number => {
-  return day.slots.filter(slot => slot[0] === memberId).reduce((total, slot) => total + slot[1], 0);
+export const getParticipantCount = (
+  day: CalendarDay,
+  memberId: string
+): number => {
+  return day.slots
+    .filter((slot) => slot[0] === memberId)
+    .reduce((total, slot) => total + slot[1], 0);
 };
 
 export const getTotalExtraExpenses = (day: CalendarDay): number => {
   if (!day.extraExpenses || day.extraExpenses.length === 0) return 0;
-  
-  return day.extraExpenses.reduce((total, expense) => total + expense.amount, 0);
+
+  return day.extraExpenses.reduce(
+    (total, expense) => total + expense.amount,
+    0
+  );
 };
 
-export const getMemberExpensesCredit = (day: CalendarDay, memberId: string): number => {
+export const getMemberExpensesCredit = (
+  day: CalendarDay,
+  memberId: string
+): number => {
   if (!day.extraExpenses || day.extraExpenses.length === 0) return 0;
-  
+
   return day.extraExpenses
-    .filter(expense => expense.userId === memberId)
+    .filter((expense) => expense.userId === memberId)
     .reduce((total, expense) => total + expense.amount, 0);
 };
 
@@ -96,10 +114,10 @@ export const calculateCostPerPerson = (
     if (day.members.includes(memberId)) {
       const participantCount = getParticipantCount(day, memberId);
       totalDays += participantCount;
-      
+
       const costForDay = calculatePaymentAmount(day, memberId);
       totalCost += costForDay;
-      
+
       const expensesCredit = getMemberExpensesCredit(day, memberId);
       totalExpensesCredit += expensesCredit;
     }
@@ -119,7 +137,10 @@ export const isPastDay = (date: string): boolean => {
   return dayDate < now;
 };
 
-export const isAllMembersPaid = (day: CalendarDay, allMembers: Member[]): boolean => {
+export const isAllMembersPaid = (
+  day: CalendarDay,
+  allMembers: Member[]
+): boolean => {
   if (day.members.length === 0) return false;
   if (!isPastDay(day.date)) return false;
 
@@ -129,30 +150,34 @@ export const isAllMembersPaid = (day: CalendarDay, allMembers: Member[]): boolea
   });
 };
 
-export const calculatePaymentAmount = (day: CalendarDay, memberId: string, allMembers?: Member[]): number => {
+export const calculatePaymentAmount = (
+  day: CalendarDay,
+  memberId: string,
+  allMembers?: Member[]
+): number => {
   if (allMembers) {
     const memberData = allMembers.find((m) => m.id === memberId);
     if (memberData?.isCore) return 0;
   }
-  
+
   const totalParticipants = getTotalParticipantsInDay(day);
   if (totalParticipants === 0) return 0;
-  
+
   const participantCount = getParticipantCount(day, memberId);
-  
+
   // Calculate total session cost, accounting for multiple courts
-  const totalSessionCost = day.courtCount && day.courtCount > 1 
-    ? day.sessionCost * day.courtCount 
-    : day.sessionCost;
-    
+  const totalSessionCost =
+    day.courtCount && day.courtCount > 1
+      ? day.sessionCost * day.courtCount
+      : day.sessionCost;
+
   const totalExtraExpenses = getTotalExtraExpenses(day);
   const extraExpensesPerPerson = totalExtraExpenses / totalParticipants;
-  
+
   const costPerSlot = totalSessionCost / totalParticipants;
-  
-  const totalCost = (costPerSlot * participantCount) + (extraExpensesPerPerson * participantCount);
-  
-  const expensesCredit = getMemberExpensesCredit(day, memberId);
-  
-  return totalCost - expensesCredit;
+
+  const totalCost =
+    costPerSlot * participantCount + extraExpensesPerPerson * participantCount;
+
+  return totalCost;
 };
