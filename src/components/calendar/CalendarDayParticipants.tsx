@@ -51,19 +51,21 @@ export const CalendarDayParticipants: React.FC<
         );
       }
     } else {
+      const amountToPay = calculatePaymentAmount(day, member.id, members);
+      const formattedAmount = formatCurrency(amountToPay);
       // Regular member logic
       if (isPaid) {
         return (
           <span className="flex items-center gap-1">
             <Check className="h-3 w-3" />
-            Đã thanh toán
+            Đã thanh toán - {formattedAmount}
           </span>
         );
       } else {
         return (
           <span className="flex items-center gap-1">
             <Clock className="h-3 w-3" />
-            Chưa thanh toán
+            Chưa thanh toán - {formattedAmount}
           </span>
         );
       }

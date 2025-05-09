@@ -21,7 +21,6 @@ import {
   getParticipantCount,
   getTotalParticipantsInDay,
 } from "@/utils/schedulerUtils";
-import { toggleDayPaymentStatus } from "@/utils/api";
 import {
   isWithinOneHourOfSession,
   useCalendarDayUser,

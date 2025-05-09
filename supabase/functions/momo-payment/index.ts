@@ -58,7 +58,6 @@ async function handleCreatePayment(req: Request): Promise<Response> {
       orderId,
       orderInfo,
       redirectUrl,
-      ipnUrl,
       extraData,
       userInfo,
       items,
