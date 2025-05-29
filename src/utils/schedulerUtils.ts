@@ -1,3 +1,4 @@
+
 export interface Member {
   id: string;
   name: string;
@@ -100,6 +101,38 @@ export const getMemberExpensesCredit = (
     .reduce((total, expense) => total + expense.amount, 0);
 };
 
+// Calculate total money spent (extra expenses)
+export const getTotalMoneySpent = (days: CalendarDay[]): number => {
+  return days.reduce((total, day) => total + getTotalExtraExpenses(day), 0);
+};
+
+// Calculate total money collected (member payments)
+export const getTotalMoneyCollected = (
+  days: CalendarDay[],
+  allMembers: Member[]
+): number => {
+  return days.reduce((total, day) => {
+    const dayTotal = day.paidMembers.reduce((daySum, memberId) => {
+      const member = allMembers.find((m) => m.id === memberId);
+      if (member?.isCore) return daySum; // Core members don't contribute money
+      
+      const paymentAmount = calculatePaymentAmount(day, memberId, allMembers);
+      return daySum + paymentAmount;
+    }, 0);
+    return total + dayTotal;
+  }, 0);
+};
+
+// Calculate balance (money collected - money spent)
+export const getMoneyBalance = (
+  days: CalendarDay[],
+  allMembers: Member[]
+): number => {
+  const collected = getTotalMoneyCollected(days, allMembers);
+  const spent = getTotalMoneySpent(days);
+  return collected - spent;
+};
+
 export const calculateCostPerPerson = (
   days: CalendarDay[],
   memberId: string,
@@ -120,7 +153,7 @@ export const calculateCostPerPerson = (
 
       // Core members don't pay
       if (!isCoreUser) {
-        const costForDay = calculatePaymentAmount(day, memberId);
+        const costForDay = calculatePaymentAmount(day, memberId, allMembers);
         totalCost += costForDay;
       }
     }
@@ -156,6 +189,7 @@ export const isAllMembersPaid = (
 /**
  * Calculate the payment amount for a member
  * Core members don't pay anything
+ * Non-core members pay court fees + 20% extra (minimum 50k)
  */
 export const calculatePaymentAmount = (
   day: CalendarDay,
@@ -183,9 +217,18 @@ export const calculatePaymentAmount = (
   const totalExtraExpenses = getTotalExtraExpenses(day);
   const extraExpensesPerPerson = totalExtraExpenses / totalParticipants;
 
-  // Regular members pay for court fees and extras
+  // Calculate court cost per slot for non-core members
   const costPerSlot = totalSessionCost / totalParticipants;
-  const courtCost = costPerSlot * participantCount;
+  let courtCost = costPerSlot * participantCount;
+  
+  // Add 20% extra for non-core members
+  courtCost = courtCost * 1.2;
+  
+  // Minimum 50k if the amount after adding 20% is less than 50k
+  if (courtCost < 50000) {
+    courtCost = 50000;
+  }
+
   const extraCost = extraExpensesPerPerson * participantCount;
 
   // Subtract user's own expense contributions

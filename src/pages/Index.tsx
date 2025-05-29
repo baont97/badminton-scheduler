@@ -1,8 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Calendar from "@/components/calendar";
 import MemberList from "@/components/MemberList";
 import StatisticsTable from "@/components/StatisticsTable";
+import FinancialSummary from "@/components/FinancialSummary";
 import { Member, CalendarDay } from "@/utils/schedulerUtils";
 import { fetchUsers, fetchBadmintonDays } from "@/utils/api";
 import { toast } from "sonner";
@@ -148,6 +150,11 @@ const Index = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      {/* Financial Summary */}
+      <div className="mb-8">
+        <FinancialSummary days={days} members={members} />
+      </div>
+
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Calendar

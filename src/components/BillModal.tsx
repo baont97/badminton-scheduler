@@ -1,3 +1,4 @@
+
 import React, { useRef } from "react";
 import {
   CalendarDay,
@@ -230,7 +231,7 @@ export const BillModal: React.FC<BillModalProps> = ({
 
                 const paymentAmount = isCore
                   ? 0
-                  : calculatePaymentAmount(day, memberId);
+                  : calculatePaymentAmount(day, memberId, members);
 
                 const hasPaid = isCore || day.paidMembers.includes(memberId);
 
@@ -257,7 +258,7 @@ export const BillModal: React.FC<BillModalProps> = ({
                         } font-medium`}
                       >
                         {isCore
-                          ? "Miễn phí sân"
+                          ? "Miễn phí"
                           : formatCurrency(paymentAmount)}
                       </span>
                       {!isCore && (
@@ -269,11 +270,6 @@ export const BillModal: React.FC<BillModalProps> = ({
                           ({hasPaid ? "Đã TT" : "Chưa TT"})
                         </span>
                       )}
-                      {isCore && (
-                        <span className="text-xs ml-1 text-amber-600">
-                          (Còn phí phát sinh)
-                        </span>
-                      )}
                     </div>
                   </div>
                 );
@@ -283,8 +279,7 @@ export const BillModal: React.FC<BillModalProps> = ({
 
           <div className="mt-6 text-sm text-center text-gray-800 bg-gray-100 p-2 rounded-md">
             <p>
-              * Thành viên cứng được miễn phí sân, chỉ thanh toán chi phí phát
-              sinh.
+              * Thành viên cứng được miễn phí. Thành viên vãng lai tính thêm 20% (tối thiểu 50k).
             </p>
           </div>
 

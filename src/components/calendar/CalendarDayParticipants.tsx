@@ -1,3 +1,4 @@
+
 import React from "react";
 import {
   CalendarDay,
@@ -34,22 +35,12 @@ export const CalendarDayParticipants: React.FC<
   // Helper to determine payment status text
   const getPaymentStatusText = (member: Member, isPaid: boolean) => {
     if (member.isCore) {
-      // Core member logic
-      if (isPaid) {
-        return (
-          <span className="flex items-center gap-1">
-            <Check className="h-3 w-3" />
-            Thành viên cứng
-          </span>
-        );
-      } else {
-        return (
-          <span className="flex items-center gap-1">
-            <Check className="h-3 w-3" />
-            Thành viên cứng
-          </span>
-        );
-      }
+      return (
+        <span className="flex items-center gap-1">
+          <Check className="h-3 w-3" />
+          Thành viên cứng
+        </span>
+      );
     } else {
       const amountToPay = calculatePaymentAmount(day, member.id, members);
       const formattedAmount = formatCurrency(amountToPay);
