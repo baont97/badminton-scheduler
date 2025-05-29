@@ -1,4 +1,3 @@
-
 export interface Member {
   id: string;
   name: string;
@@ -187,9 +186,20 @@ export const isAllMembersPaid = (
 };
 
 /**
+ * Check if a date is after June 1, 2025
+ */
+const isAfterJune1st2025 = (dateString: string): boolean => {
+  const date = new Date(dateString);
+  const june1st2025 = new Date('2025-06-01');
+  return date >= june1st2025;
+};
+
+/**
  * Calculate the payment amount for a member
  * Core members don't pay anything
- * Non-core members pay court fees + 20% extra (minimum 50k)
+ * Non-core members:
+ * - Before 1/6/2025: pay court fees normally
+ * - From 1/6/2025: pay court fees + 20% extra (minimum 50k)
  */
 export const calculatePaymentAmount = (
   day: CalendarDay,
@@ -221,12 +231,15 @@ export const calculatePaymentAmount = (
   const costPerSlot = totalSessionCost / totalParticipants;
   let courtCost = costPerSlot * participantCount;
   
-  // Add 20% extra for non-core members
-  courtCost = courtCost * 1.2;
-  
-  // Minimum 50k if the amount after adding 20% is less than 50k
-  if (courtCost < 50000) {
-    courtCost = 50000;
+  // Apply 20% extra and minimum 50k only from June 1, 2025 onwards
+  if (isAfterJune1st2025(day.date)) {
+    // Add 20% extra for non-core members
+    courtCost = courtCost * 1.2;
+    
+    // Minimum 50k if the amount after adding 20% is less than 50k
+    if (courtCost < 50000) {
+      courtCost = 50000;
+    }
   }
 
   const extraCost = extraExpensesPerPerson * participantCount;
