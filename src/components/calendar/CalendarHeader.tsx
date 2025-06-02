@@ -1,11 +1,15 @@
-
 // src/components/Calendar/CalendarHeader.tsx
-import React from 'react';
+import React from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CalendarHeaderProps {
   currentMonth: number;
@@ -66,15 +70,7 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="outline" 
-                  size="icon"
-                  onClick={onPreviousMonth}
-                  disabled={
-                    new Date().getMonth() + 1 === currentMonth &&
-                    new Date().getFullYear() === currentYear
-                  }
-                >
+                <Button variant="outline" size="icon" onClick={onPreviousMonth}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
@@ -83,15 +79,11 @@ export const CalendarHeader: React.FC<CalendarHeaderProps> = ({
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          
+
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={onNextMonth}
-                >
+                <Button variant="outline" size="icon" onClick={onNextMonth}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
