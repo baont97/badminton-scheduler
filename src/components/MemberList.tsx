@@ -1,11 +1,24 @@
+
 import React, { useState } from "react";
 import { Member } from "@/utils/schedulerUtils";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { toggleCoreMember } from "@/utils/apiUtils";
+import { toggleCoreMember, deleteMember } from "@/utils/api/userApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, Info } from "lucide-react";
+import { ShieldCheck, Info, UserX } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -23,6 +36,7 @@ const MemberList: React.FC<MemberListProps> = ({
   onUpdateMembers,
 }) => {
   const [loading, setLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const { profile } = useAuth();
   const isAdmin = profile?.is_admin === true;
 
@@ -62,6 +76,34 @@ const MemberList: React.FC<MemberListProps> = ({
     }
 
     setLoading(false);
+  };
+
+  const handleDeleteMember = async (member: Member) => {
+    if (!isAdmin) {
+      toast.error("Bạn không có quyền xóa thành viên", {
+        description: "Chỉ admin mới có thể xóa thành viên",
+      });
+      return;
+    }
+
+    // Prevent deleting yourself
+    if (member.id === profile?.id) {
+      toast.error("Bạn không thể xóa chính mình");
+      return;
+    }
+
+    setDeleteLoading(member.id);
+    const success = await deleteMember(member.id);
+
+    if (success) {
+      const updatedMembers = members.filter((m) => m.id !== member.id);
+      onUpdateMembers(updatedMembers);
+      toast.success(`Đã xóa thành viên ${member.name} thành công`);
+    } else {
+      toast.error("Có lỗi xảy ra khi xóa thành viên");
+    }
+
+    setDeleteLoading(null);
   };
 
   return (
@@ -118,6 +160,37 @@ const MemberList: React.FC<MemberListProps> = ({
                     disabled={loading}
                     className="data-[state=checked]:bg-badminton"
                   />
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="ml-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        disabled={deleteLoading === member.id || member.id === profile?.id}
+                      >
+                        <UserX className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Xóa thành viên</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Bạn có chắc chắn muốn xóa thành viên "{member.name}" không? 
+                          Hành động này sẽ xóa tất cả dữ liệu liên quan và không thể hoàn tác.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Hủy</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleDeleteMember(member)}
+                          className="bg-destructive hover:bg-destructive/90"
+                        >
+                          Xóa
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </>
               ) : (
                 <Tooltip>

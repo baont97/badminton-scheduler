@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Member } from "../schedulerUtils";
 
@@ -76,6 +75,47 @@ export async function toggleCoreMember(
     }
   } catch (error) {
     console.error("Error toggling core member status:", error);
+    return false;
+  }
+}
+
+// Delete a member (admin only)
+export async function deleteMember(userId: string): Promise<boolean> {
+  try {
+    // First, check if current user is admin
+    const isAdmin = await isCurrentUserAdmin();
+    if (!isAdmin) {
+      console.error("Only admins can delete members");
+      return false;
+    }
+
+    // Delete from core_members first (if exists)
+    await supabase
+      .from("core_members")
+      .delete()
+      .eq("user_id", userId);
+
+    // Delete from badminton_participants
+    await supabase
+      .from("badminton_participants")
+      .delete()
+      .eq("user_id", userId);
+
+    // Delete from extra_expenses
+    await supabase
+      .from("extra_expenses")
+      .delete()
+      .eq("user_id", userId);
+
+    // Finally, delete from profiles
+    const { error } = await supabase
+      .from("profiles")
+      .delete()
+      .eq("id", userId);
+
+    return !error;
+  } catch (error) {
+    console.error("Error deleting member:", error);
     return false;
   }
 }
