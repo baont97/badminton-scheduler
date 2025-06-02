@@ -28,7 +28,7 @@ const Header: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link to="/" className="font-bold text-xl text-badminton">
-              Cầu lông - 320 Trường chinh
+              Cầu lông 632 Trường Chinh
             </Link>
           </div>
 
