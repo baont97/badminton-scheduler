@@ -47,12 +47,13 @@ export async function fetchBadmintonDays(
   month: number
 ): Promise<CalendarDay[]> {
   try {
-    // Fetch the days first
+    // Fetch the days first - THÊM ORDER BY date ASC
     const { data: daysData, error: daysError } = await supabase
       .from("badminton_days")
       .select("*")
       .gte("date", `${year}-${month.toString().padStart(2, "0")}-01`)
-      .lt("date", `${year}-${(month + 1).toString().padStart(2, "0")}-01`);
+      .lt("date", `${year}-${(month + 1).toString().padStart(2, "0")}-01`)
+      .order("date", { ascending: true }); // ⭐ THÊM DÒNG NÀY
 
     if (daysError) throw daysError;
 
@@ -144,7 +145,10 @@ export async function fetchBadmintonDays(
       })
     );
 
-    return calendarDays;
+    // ⭐ SORT LẦN NỮA ĐỂ ĐẢM BẢO THỨ TỰ ĐÚNG
+    return calendarDays.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
   } catch (error) {
     console.error("Error fetching badminton days:", error);
     return [];

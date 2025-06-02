@@ -1,4 +1,4 @@
-// src/components/Calendar/CalendarGrid.tsx
+// src/components/calendar/CalendarGrid.tsx
 import React from "react";
 import { CalendarDay, Member } from "@/utils/schedulerUtils";
 import { CalendarDayComponent } from "./CalendarDay";
@@ -25,8 +25,13 @@ export const CalendarGrid: React.FC<CalendarGridProps> = ({
   onOpenBill,
   onUpdateDay,
 }) => {
+  // ⭐ SẮP XẾP THEO NGÀY TRƯỚC KHI FILTER
+  const sortedDays = [...days].sort((a, b) => {
+    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  });
+
   // Filter days based on hidePaidDays
-  const filteredDays = days.filter((day) => {
+  const filteredDays = sortedDays.filter((day) => {
     const allPaid = isAllMembersPaid(day, members);
     return !hidePaidDays || !allPaid;
   });

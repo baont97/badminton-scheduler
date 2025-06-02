@@ -1,5 +1,4 @@
-
-import React from "react";
+import React, { useState } from "react";
 import {
   CalendarDay,
   Member,
@@ -8,17 +7,31 @@ import {
   formatCurrency,
 } from "@/utils/schedulerUtils";
 import { Badge } from "@/components/ui/badge";
-import { Check, Clock } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Check, Clock, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import ClickableAvatar from "@/components/ClickableAvatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PaymentStatus from "./PaymentStatus";
 import { useAuth } from "@/contexts/AuthContext";
+import { toggleAttendance } from "@/utils/api/participantApi";
+import { toast } from "sonner";
 
 interface CalendarDayParticipantsProps {
   day: CalendarDay;
@@ -30,7 +43,9 @@ export const CalendarDayParticipants: React.FC<
   CalendarDayParticipantsProps
 > = ({ day, members, onUpdateDay }) => {
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const isAdmin = profile?.is_admin === true;
+  const [loadingRemove, setLoadingRemove] = useState<string | null>(null);
 
   // Helper to determine payment status text
   const getPaymentStatusText = (member: Member, isPaid: boolean) => {
@@ -60,6 +75,43 @@ export const CalendarDayParticipants: React.FC<
           </span>
         );
       }
+    }
+  };
+
+  // Handle removing a participant
+  const handleRemoveParticipant = async (
+    memberId: string,
+    memberName: string
+  ) => {
+    if (!isAdmin) {
+      toast.error("Chỉ admin mới có thể xóa thành viên khỏi buổi tập");
+      return;
+    }
+
+    try {
+      setLoadingRemove(memberId);
+
+      // Use toggleAttendance to remove the participant (they are currently participating)
+      const result = await toggleAttendance(day.id, memberId, true); // true means they are currently participating, so we want to remove them
+
+      if (result.success) {
+        // Update the day data
+        onUpdateDay({
+          ...day,
+          members: day.members.filter((id) => id !== memberId),
+          slots: day.slots.filter((slot) => slot[0] !== memberId),
+          paidMembers: day.paidMembers.filter((id) => id !== memberId),
+        });
+
+        toast.success(`Đã xóa ${memberName} khỏi buổi tập`);
+      } else if (result.error) {
+        toast.error(result.error);
+      }
+    } catch (error) {
+      console.error("Error removing participant:", error);
+      toast.error("Có lỗi xảy ra khi xóa thành viên");
+    } finally {
+      setLoadingRemove(null);
     }
   };
 
@@ -93,7 +145,7 @@ export const CalendarDayParticipants: React.FC<
                   }`}
                 >
                   <div
-                    className={`flex items-center gap-2 p-2 rounded-lg w-full transition-all ${getBadgeStyle()}`}
+                    className={`flex items-center gap-2 p-2 rounded-lg w-full transition-all ${getBadgeStyle()} relative group`}
                   >
                     <div className="relative">
                       <ClickableAvatar
@@ -111,6 +163,7 @@ export const CalendarDayParticipants: React.FC<
                         </Badge>
                       )}
                     </div>
+
                     {!isMobile ? (
                       <>
                         <div className="flex flex-col flex-1">
@@ -121,23 +174,115 @@ export const CalendarDayParticipants: React.FC<
                             {getPaymentStatusText(member, isPaid)}
                           </span>
                         </div>
-                        {memberId === user?.id && (
-                          <PaymentStatus day={day} onUpdateDay={onUpdateDay} />
-                        )}
+
+                        <div className="flex items-center gap-1">
+                          {memberId === user?.id && (
+                            <PaymentStatus
+                              day={day}
+                              onUpdateDay={onUpdateDay}
+                            />
+                          )}
+
+                          {/* Remove button - only show for admin */}
+                          {isAdmin && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                  disabled={loadingRemove === memberId}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>
+                                    Xóa thành viên khỏi buổi tập
+                                  </AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Bạn có chắc chắn muốn xóa{" "}
+                                    <strong>{member.name}</strong> khỏi buổi tập
+                                    này không? Hành động này sẽ xóa thông tin
+                                    tham gia và thanh toán của họ.
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() =>
+                                      handleRemoveParticipant(
+                                        memberId,
+                                        member.name
+                                      )
+                                    }
+                                    className="bg-destructive hover:bg-destructive/90"
+                                  >
+                                    Xóa
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
                       </>
                     ) : (
-                      <div className="ml-1 flex-1 overflow-hidden">
-                        <span className="text-xs font-medium block truncate">
-                          {member.name}
-                        </span>
-                        <span className="text-[10px] block">
-                          {member.isCore
-                            ? "Thành viên cứng"
-                            : isPaid
-                            ? "Đã TT"
-                            : "Chưa TT"}
-                        </span>
-                      </div>
+                      <>
+                        <div className="ml-1 flex-1 overflow-hidden">
+                          <span className="text-xs font-medium block truncate">
+                            {member.name}
+                          </span>
+                          <span className="text-[10px] block">
+                            {member.isCore
+                              ? "Thành viên cứng"
+                              : isPaid
+                              ? "Đã TT"
+                              : "Chưa TT"}
+                          </span>
+                        </div>
+
+                        {/* Remove button for mobile - only show for admin */}
+                        {isAdmin && (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-5 w-5 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                                disabled={loadingRemove === memberId}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  Xóa thành viên
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Xóa <strong>{member.name}</strong> khỏi buổi
+                                  tập này?
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    handleRemoveParticipant(
+                                      memberId,
+                                      member.name
+                                    )
+                                  }
+                                  className="bg-destructive hover:bg-destructive/90"
+                                >
+                                  Xóa
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   CalendarDay,
@@ -18,15 +17,20 @@ interface StatisticsTableProps {
 }
 
 const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
+  // ⭐ SẮP XẾP DAYS THEO NGÀY TRƯỚC KHI TÍNH TOÁN
+  const sortedDays = [...days].sort((a, b) => {
+    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  });
+
   // Calculate the total extra expenses for all days
-  const totalExtraExpenses = days.reduce(
+  const totalExtraExpenses = sortedDays.reduce(
     (total, day) => total + getTotalExtraExpenses(day),
     0
   );
 
   // Calculate total expenses contributed per member
   const calculateMemberExpensesContribution = (memberId: string): number => {
-    return days.reduce(
+    return sortedDays.reduce(
       (total, day) => total + getMemberExpensesCredit(day, memberId),
       0
     );
@@ -42,7 +46,7 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
       <div className="block sm:hidden space-y-4">
         {members.map((member) => {
           const { totalDays, totalCost } = calculateCostPerPerson(
-            days,
+            sortedDays, // ⭐ SỬ DỤNG SORTED DAYS
             member.id,
             members
           );
@@ -133,7 +137,7 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
           <tbody>
             {members.map((member) => {
               const { totalDays, totalCost } = calculateCostPerPerson(
-                days,
+                sortedDays, // ⭐ SỬ DỤNG SORTED DAYS
                 member.id,
                 members
               );
@@ -224,8 +228,8 @@ const StatisticsTable: React.FC<StatisticsTableProps> = ({ days, members }) => {
 
       <div className="mt-3 sm:mt-4 text-xs text-muted-foreground">
         <p className="text-center">
-          Thành viên cứng được miễn phí sân và chi phí phát sinh.
-          Người nhập chi phí phát sinh sẽ được trừ vào phần chi phí phải trả.
+          Thành viên cứng được miễn phí sân và chi phí phát sinh. Người nhập chi
+          phí phát sinh sẽ được trừ vào phần chi phí phải trả.
         </p>
       </div>
     </div>

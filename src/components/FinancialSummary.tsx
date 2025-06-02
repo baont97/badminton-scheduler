@@ -1,4 +1,3 @@
-
 import React from "react";
 import {
   CalendarDay,
@@ -21,9 +20,14 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({
   days,
   members,
 }) => {
-  const totalSpent = getTotalMoneySpent(days);
-  const totalCollected = getTotalMoneyCollected(days, members);
-  const balance = getMoneyBalance(days, members);
+  // ⭐ SẮP XẾP DAYS THEO NGÀY TRƯỚC KHI TÍNH TOÁN
+  const sortedDays = [...days].sort((a, b) => {
+    return new Date(a.date).getTime() - new Date(b.date).getTime();
+  });
+
+  const totalSpent = getTotalMoneySpent(sortedDays);
+  const totalCollected = getTotalMoneyCollected(sortedDays, members);
+  const balance = getMoneyBalance(sortedDays, members);
 
   return (
     <Card className="w-full">
@@ -61,7 +65,11 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({
           <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
             <div>
               <p className="text-sm text-blue-600 font-medium">Số dư</p>
-              <p className={`text-lg font-bold ${balance >= 0 ? 'text-blue-700' : 'text-red-700'}`}>
+              <p
+                className={`text-lg font-bold ${
+                  balance >= 0 ? "text-blue-700" : "text-red-700"
+                }`}
+              >
                 {formatCurrency(balance)}
               </p>
             </div>
@@ -78,7 +86,8 @@ const FinancialSummary: React.FC<FinancialSummaryProps> = ({
 
         <div className="mt-4 text-xs text-muted-foreground">
           <p className="text-center">
-            * Thành viên cứng được miễn phí sân. Thành viên vãng lai tính thêm 20% (tối thiểu 50k).
+            * Thành viên cứng được miễn phí sân. Thành viên vãng lai tính thêm
+            20% (tối thiểu 50k).
           </p>
         </div>
       </CardContent>
