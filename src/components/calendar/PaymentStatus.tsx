@@ -4,9 +4,7 @@ import { Button } from "@/components/ui/button";
 import { CalendarDay, calculatePaymentAmount } from "@/utils/schedulerUtils";
 import { useAuth } from "@/contexts/AuthContext";
 import PaymentModal from "@/components/PaymentModal";
-import { markPaymentStatus } from "@/utils/api/participantApi";
 import { hasPendingPaymentRequest } from "@/utils/api/paymentRequestApi";
-import { toast } from "sonner";
 import { Check, Clock, CreditCard } from "lucide-react";
 import {
   Tooltip,
@@ -17,18 +15,12 @@ import {
 
 interface PaymentStatusProps {
   day: CalendarDay;
-  onUpdateDay: (day: CalendarDay) => void;
 }
 
-export const PaymentStatus: React.FC<PaymentStatusProps> = ({
-  day,
-  onUpdateDay,
-}) => {
+export const PaymentStatus: React.FC<PaymentStatusProps> = ({ day }) => {
   const { user, profile } = useAuth();
-  const [loading, setLoading] = useState(false);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const [hasPendingRequest, setHasPendingRequest] = useState(false);
-  const isAdmin = profile?.is_admin === true;
 
   if (!user) return null;
 

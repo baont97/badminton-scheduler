@@ -207,12 +207,7 @@ export const CalendarDayParticipants: React.FC<
                         </div>
 
                         <div className="flex items-center gap-1">
-                          {memberId === user?.id && (
-                            <PaymentStatus
-                              day={day}
-                              onUpdateDay={onUpdateDay}
-                            />
-                          )}
+                          {memberId === user?.id && <PaymentStatus day={day} />}
 
                           {/* Remove button - only show for admin */}
                           {isAdmin && (

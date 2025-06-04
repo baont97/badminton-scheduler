@@ -136,7 +136,7 @@ export async function fetchBadmintonDays(
           sessionCost: day.session_cost,
           sessionTime: day.session_time,
           extraExpenses: expenses,
-          can_pay: day.can_pay,
+          canPay: day.can_pay,
           _removedCoreMembers: optOutsByDay[day.id] || [],
           // Add new properties for location and court count
           location: location,
