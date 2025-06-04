@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 
 export interface PaymentRequest {
@@ -20,29 +19,120 @@ export interface PaymentRequest {
   } | null;
 }
 
+type PaymentStatus = "pending" | "approved" | "rejected" | "all";
+
 /**
- * Fetch all pending payment requests for admin
+ * Fetch payment requests by status
  */
-export async function fetchPendingPaymentRequests(): Promise<PaymentRequest[]> {
+export async function fetchPaymentRequestsByStatus(
+  status: PaymentStatus = "pending"
+): Promise<PaymentRequest[]> {
   try {
-    const { data, error } = await supabase
-      .from("payment_requests")
-      .select(`
+    console.log("Fetching payment requests with status:", status);
+
+    let query = supabase.from("payment_requests").select(`
         *,
-        profiles!payment_requests_user_id_fkey (user_name),
-        badminton_days!payment_requests_day_id_fkey (date, session_time)
-      `)
-      .eq("status", "pending")
-      .order("created_at", { ascending: false });
+        profiles(user_name),
+        badminton_days(date, session_time)
+      `);
+
+    // Add status filter only if not "all"
+    if (status !== "all") {
+      query = query.eq("status", status);
+    }
+
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    });
 
     if (error) {
       console.error("Error fetching payment requests:", error);
-      return [];
+
+      // Fallback: try simple query without joins
+      console.log("Trying fallback query...");
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("payment_requests")
+        .select("*")
+        .eq(
+          status !== "all" ? "status" : "id",
+          status !== "all" ? status : undefined
+        )
+        .order("created_at", { ascending: false });
+
+      if (fallbackError) {
+        console.error("Fallback query also failed:", fallbackError);
+        return [];
+      }
+
+      console.log("Fallback data:", fallbackData);
+      return (fallbackData || []) as PaymentRequest[];
     }
 
-    return (data || []) as PaymentRequest[];
+    console.log("Query successful, data:", data);
+    return (data || []) as unknown as PaymentRequest[];
   } catch (error) {
-    console.error("Error in fetchPendingPaymentRequests:", error);
+    console.error("Error in fetchPaymentRequestsByStatus:", error);
+    return [];
+  }
+}
+
+/**
+ * Fetch all pending payment requests for admin (backward compatibility)
+ */
+export async function fetchPendingPaymentRequests(): Promise<PaymentRequest[]> {
+  return fetchPaymentRequestsByStatus("pending");
+}
+
+/**
+ * Debug function to check all payment requests
+ */
+export async function debugPaymentRequests() {
+  try {
+    console.log("=== DEBUG: Checking all payment requests ===");
+
+    // Query 1: Raw data
+    const { data: rawData, error: rawError } = await supabase
+      .from("payment_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    console.log("Raw data:", rawData);
+    console.log("Raw error:", rawError);
+
+    // Query 2: Count by status
+    const { data: statusCount } = await supabase
+      .from("payment_requests")
+      .select("status")
+      .order("status");
+
+    const statusSummary = statusCount?.reduce((acc: any, item) => {
+      acc[item.status] = (acc[item.status] || 0) + 1;
+      return acc;
+    }, {});
+
+    console.log("Status summary:", statusSummary);
+
+    // Query 3: Check foreign key relationships
+    const { data: joinTest, error: joinError } = await supabase
+      .from("payment_requests")
+      .select(
+        `
+        id,
+        status,
+        user_id,
+        day_id,
+        profiles(user_name),
+        badminton_days(date)
+      `
+      )
+      .limit(1);
+
+    console.log("Join test:", joinTest);
+    console.log("Join error:", joinError);
+
+    return rawData;
+  } catch (error) {
+    console.error("Debug error:", error);
     return [];
   }
 }

@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import {
   Dialog,
@@ -40,29 +39,37 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
   };
 
   const handlePaymentConfirm = async () => {
-    if (!user) return;
+    if (!user) {
+      toast.error("Vui lòng đăng nhập");
+      return;
+    }
+
+    // Validate dữ liệu
+    if (!dayId || !amount || amount <= 0) {
+      toast.error("Dữ liệu không hợp lệ");
+      return;
+    }
 
     setLoading(true);
     try {
+      const roundedAmount = Math.round(amount);
+      const formattedDate = new Date(dayDate).toLocaleDateString("vi-VN");
+
       const { error } = await supabase.from("payment_requests").insert({
         day_id: dayId,
         user_id: user.id,
-        amount: amount,
-        notes: `Thanh toán cho buổi ${dayDate}`,
+        amount: roundedAmount,
+        notes: `Thanh toán cho buổi ${formattedDate}`,
       });
 
-      if (error) {
-        console.error("Error creating payment request:", error);
-        toast.error("Có lỗi xảy ra khi tạo yêu cầu thanh toán");
-        return;
-      }
+      if (error) throw error;
 
       toast.success("Đã gửi yêu cầu thanh toán! Chờ admin duyệt.");
       onPaymentRequested();
       onClose();
-    } catch (error) {
-      console.error("Error in handlePaymentConfirm:", error);
-      toast.error("Có lỗi xảy ra");
+    } catch (error: any) {
+      console.error("Error creating payment request:", error);
+      toast.error(error.message || "Có lỗi xảy ra khi tạo yêu cầu thanh toán");
     } finally {
       setLoading(false);
     }
@@ -111,7 +118,9 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
           {/* Instructions */}
           <div className="w-full text-sm text-gray-600 space-y-2">
-            <p>📱 <strong>Hướng dẫn thanh toán:</strong></p>
+            <p>
+              📱 <strong>Hướng dẫn thanh toán:</strong>
+            </p>
             <ol className="list-decimal list-inside space-y-1 ml-4">
               <li>Mở app MoMo và quét QR code</li>
               <li>Kiểm tra số tiền chính xác</li>
