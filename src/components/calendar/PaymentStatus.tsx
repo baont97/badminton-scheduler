@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+
+import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CalendarDay, calculatePaymentAmount } from "@/utils/schedulerUtils";
 import { useAuth } from "@/contexts/AuthContext";
-import MomoPaymentButton from "@/components/MomoPaymentButton";
+import PaymentModal from "@/components/PaymentModal";
 import { markPaymentStatus } from "@/utils/api/participantApi";
+import { hasPendingPaymentRequest } from "@/utils/api/paymentRequestApi";
 import { toast } from "sonner";
-import { Check } from "lucide-react";
+import { Check, Clock, CreditCard } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -25,6 +27,8 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
 }) => {
   const { user, profile } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [hasPendingRequest, setHasPendingRequest] = useState(false);
   const isAdmin = profile?.is_admin === true;
 
   if (!user) return null;
@@ -45,6 +49,7 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
       <div className="flex items-center justify-between">
         <Badge className="bg-green-500 hover:bg-green-600 flex items-center gap-1.5">
           <Check className="h-3 w-3" />
+          Thành viên cứng
         </Badge>
       </div>
     );
@@ -53,6 +58,18 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
   // For regular members: calculate the full amount (court fee + extras)
   const amountToPay = calculatePaymentAmount(day, user.id);
 
+  // Check for pending payment request
+  useEffect(() => {
+    const checkPendingRequest = async () => {
+      if (!hasPaid && user) {
+        const pending = await hasPendingPaymentRequest(day.id, user.id);
+        setHasPendingRequest(pending);
+      }
+    };
+
+    checkPendingRequest();
+  }, [day.id, user.id, hasPaid]);
+
   // If already paid, show appropriate status
   if (hasPaid) {
     return (
@@ -60,6 +77,18 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
         <Badge className="bg-green-500 hover:bg-green-600 flex items-center gap-1.5">
           <Check className="h-3 w-3" />
           Đã thanh toán
+        </Badge>
+      </div>
+    );
+  }
+
+  // If has pending request, show pending status
+  if (hasPendingRequest) {
+    return (
+      <div className="flex items-center gap-1">
+        <Badge className="bg-yellow-500 hover:bg-yellow-600 flex items-center gap-1.5">
+          <Clock className="h-3 w-3" />
+          Chờ duyệt
         </Badge>
       </div>
     );
@@ -92,27 +121,32 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
     }
   };
 
-  // Handle payment success
-  const handlePaymentSuccess = () => {
-    // Update the day data
-    onUpdateDay({
-      ...day,
-      paidMembers: [...day.paidMembers, user.id],
-    });
+  // Handle payment modal success
+  const handlePaymentRequested = () => {
+    setHasPendingRequest(true);
   };
 
   // Show payment controls if payment is needed
   return (
     <div className="flex items-center gap-1">
-      {/* Only show MoMo payment button if day.can_pay is true */}
-      {day.can_pay && (
-        <MomoPaymentButton
-          dayId={day.id}
-          dayDate={day.date}
-          amount={amountToPay}
-          onPaymentSuccess={handlePaymentSuccess}
-        />
-      )}
+      {/* Payment request button */}
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              className="border-badminton text-badminton hover:bg-badminton/10"
+              onClick={() => setPaymentModalOpen(true)}
+            >
+              <CreditCard className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Thanh toán</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
 
       {/* Admin can mark as paid manually */}
       {isAdmin && (
@@ -135,6 +169,16 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
           </Tooltip>
         </TooltipProvider>
       )}
+
+      {/* Payment Modal */}
+      <PaymentModal
+        isOpen={paymentModalOpen}
+        onClose={() => setPaymentModalOpen(false)}
+        dayId={day.id}
+        dayDate={day.date}
+        amount={amountToPay}
+        onPaymentRequested={handlePaymentRequested}
+      />
     </div>
   );
 };

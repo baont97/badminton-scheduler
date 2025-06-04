@@ -312,6 +312,42 @@ export type Database = {
           },
         ]
       }
+      payment_requests: {
+        Row: {
+          amount: number
+          created_at: string
+          day_id: string
+          id: string
+          notes: string | null
+          processed_at: string | null
+          processed_by: string | null
+          status: Database["public"]["Enums"]["payment_request_status"]
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          day_id: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: Database["public"]["Enums"]["payment_request_status"]
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          day_id?: string
+          id?: string
+          notes?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: Database["public"]["Enums"]["payment_request_status"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -390,7 +426,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      payment_request_status: "pending" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -505,6 +541,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      payment_request_status: ["pending", "approved", "rejected"],
+    },
   },
 } as const

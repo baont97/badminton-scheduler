@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, Settings, Users, UserPlus } from "lucide-react";
+import { AlertTriangle, Settings, Users, UserPlus, CreditCard } from "lucide-react";
 import CreateUserForm from "@/components/admin/CreateUserForm";
 import UserManagement from "@/components/admin/UserManagement";
 import BadmintonSettings from "@/components/admin/BadmintonSettings";
+import PaymentRequestManagement from "@/components/admin/PaymentRequestManagement";
 import { fetchUsers } from "@/utils/api";
 
 const Admin = () => {
@@ -64,6 +65,10 @@ const Admin = () => {
             <Users className="h-4 w-4" />
             Quản Lý Users
           </TabsTrigger>
+          <TabsTrigger value="payments" className="flex items-center gap-1">
+            <CreditCard className="h-4 w-4" />
+            Duyệt Thanh Toán
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="create-user">
@@ -76,6 +81,10 @@ const Admin = () => {
 
         <TabsContent value="users">
           <UserManagement users={users} onUserUpdated={loadUsers} />
+        </TabsContent>
+
+        <TabsContent value="payments">
+          <PaymentRequestManagement />
         </TabsContent>
       </Tabs>
     </div>
