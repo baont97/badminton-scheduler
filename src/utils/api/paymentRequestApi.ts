@@ -13,11 +13,11 @@ export interface PaymentRequest {
   notes: string | null;
   profiles?: {
     user_name: string | null;
-  };
+  } | null;
   badminton_days?: {
     date: string;
     session_time: string;
-  };
+  } | null;
 }
 
 /**
@@ -40,7 +40,7 @@ export async function fetchPendingPaymentRequests(): Promise<PaymentRequest[]> {
       return [];
     }
 
-    return data || [];
+    return (data || []) as PaymentRequest[];
   } catch (error) {
     console.error("Error in fetchPendingPaymentRequests:", error);
     return [];
