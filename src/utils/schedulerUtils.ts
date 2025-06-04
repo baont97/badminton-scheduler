@@ -33,7 +33,7 @@ export interface CalendarDay {
   sessionCost: number;
   sessionTime: string;
   extraExpenses: ExtraExpense[];
-  can_pay: boolean;
+  canPay: boolean;
   _removedCoreMembers?: string[];
   location?: Location | null;
   courtCount?: number;
@@ -114,7 +114,7 @@ export const getTotalMoneyCollected = (
     const dayTotal = day.paidMembers.reduce((daySum, memberId) => {
       const member = allMembers.find((m) => m.id === memberId);
       if (member?.isCore) return daySum; // Core members don't contribute money
-      
+
       const paymentAmount = calculatePaymentAmount(day, memberId, allMembers);
       return daySum + paymentAmount;
     }, 0);
@@ -190,7 +190,7 @@ export const isAllMembersPaid = (
  */
 const isAfterJune1st2025 = (dateString: string): boolean => {
   const date = new Date(dateString);
-  const june1st2025 = new Date('2025-06-01');
+  const june1st2025 = new Date("2025-06-01");
   return date >= june1st2025;
 };
 
@@ -230,12 +230,12 @@ export const calculatePaymentAmount = (
   // Calculate court cost per slot for non-core members
   const costPerSlot = totalSessionCost / totalParticipants;
   let courtCost = costPerSlot * participantCount;
-  
+
   // Apply 20% extra and minimum 50k only from June 1, 2025 onwards
   if (isAfterJune1st2025(day.date)) {
     // Add 20% extra for non-core members
     courtCost = courtCost * 1.2;
-    
+
     // Minimum 50k if the amount after adding 20% is less than 50k
     if (courtCost < 50000) {
       courtCost = 50000;

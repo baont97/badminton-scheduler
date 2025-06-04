@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -49,7 +48,7 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
       <div className="flex items-center justify-between">
         <Badge className="bg-green-500 hover:bg-green-600 flex items-center gap-1.5">
           <Check className="h-3 w-3" />
-          Thành viên cứng
+          Cứng
         </Badge>
       </div>
     );
@@ -94,33 +93,6 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
     );
   }
 
-  // Handle manual payment marking (admin only)
-  const handleMarkAsPaid = async () => {
-    if (!isAdmin) return;
-
-    setLoading(true);
-    try {
-      const success = await markPaymentStatus(day.id, user.id, true);
-
-      if (success) {
-        toast.success("Đã đánh dấu đã thanh toán");
-
-        // Update the day data
-        onUpdateDay({
-          ...day,
-          paidMembers: [...day.paidMembers, user.id],
-        });
-      } else {
-        toast.error("Không thể đánh dấu đã thanh toán");
-      }
-    } catch (error) {
-      console.error("Error marking payment:", error);
-      toast.error("Có lỗi xảy ra khi đánh dấu thanh toán");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Handle payment modal success
   const handlePaymentRequested = () => {
     setHasPendingRequest(true);
@@ -130,41 +102,21 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({
   return (
     <div className="flex items-center gap-1">
       {/* Payment request button */}
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              className="border-badminton text-badminton hover:bg-badminton/10"
-              onClick={() => setPaymentModalOpen(true)}
-            >
-              <CreditCard className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Thanh toán</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      {/* Admin can mark as paid manually */}
-      {isAdmin && (
+      {day.canPay && (
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="outline"
                 size="icon"
-                className="border-green-500 text-green-500 hover:bg-green-50"
-                onClick={handleMarkAsPaid}
-                disabled={loading}
+                className="border-badminton text-badminton hover:bg-badminton/10"
+                onClick={() => setPaymentModalOpen(true)}
               >
-                <Check className="h-4 w-4" />
+                <CreditCard className="h-4 w-4" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Đánh dấu đã thanh toán</p>
+              <p>Thanh toán</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>

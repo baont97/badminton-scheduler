@@ -8,7 +8,7 @@ import {
 } from "@/utils/schedulerUtils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Check, Clock, X } from "lucide-react";
+import { Check, Clock, CreditCard, X } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -30,7 +30,10 @@ import ClickableAvatar from "@/components/ClickableAvatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PaymentStatus from "./PaymentStatus";
 import { useAuth } from "@/contexts/AuthContext";
-import { toggleAttendance } from "@/utils/api/participantApi";
+import {
+  markPaymentStatus,
+  toggleAttendance,
+} from "@/utils/api/participantApi";
 import { toast } from "sonner";
 
 interface CalendarDayParticipantsProps {
@@ -46,6 +49,7 @@ export const CalendarDayParticipants: React.FC<
   const { user, profile } = useAuth();
   const isAdmin = profile?.is_admin === true;
   const [loadingRemove, setLoadingRemove] = useState<string | null>(null);
+  const [isMarkingAsPaid, setIsMarkingAsPaid] = useState(false);
 
   // Helper to determine payment status text
   const getPaymentStatusText = (member: Member, isPaid: boolean) => {
@@ -112,6 +116,33 @@ export const CalendarDayParticipants: React.FC<
       toast.error("Có lỗi xảy ra khi xóa thành viên");
     } finally {
       setLoadingRemove(null);
+    }
+  };
+
+  // Handle manual payment marking (admin only)
+  const handleMarkAsPaid = async (userId: string) => {
+    if (!isAdmin) return;
+
+    setIsMarkingAsPaid(true);
+    try {
+      const success = await markPaymentStatus(day.id, userId, true);
+
+      if (success) {
+        toast.success("Đã đánh dấu đã thanh toán");
+
+        // Update the day data
+        onUpdateDay({
+          ...day,
+          paidMembers: [...day.paidMembers, userId],
+        });
+      } else {
+        toast.error("Không thể đánh dấu đã thanh toán");
+      }
+    } catch (error) {
+      console.error("Error marking payment:", error);
+      toast.error("Có lỗi xảy ra khi đánh dấu thanh toán");
+    } finally {
+      setIsMarkingAsPaid(false);
     }
   };
 
@@ -185,45 +216,91 @@ export const CalendarDayParticipants: React.FC<
 
                           {/* Remove button - only show for admin */}
                           {isAdmin && (
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
-                                  disabled={loadingRemove === memberId}
-                                >
-                                  <X className="h-3 w-3" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>
-                                    Xóa thành viên khỏi buổi tập
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Bạn có chắc chắn muốn xóa{" "}
-                                    <strong>{member.name}</strong> khỏi buổi tập
-                                    này không? Hành động này sẽ xóa thông tin
-                                    tham gia và thanh toán của họ.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Hủy</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() =>
-                                      handleRemoveParticipant(
-                                        memberId,
-                                        member.name
-                                      )
-                                    }
-                                    className="bg-destructive hover:bg-destructive/90"
-                                  >
-                                    Xóa
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            <>
+                              <div className="flex items-center gap-1">
+                                {/* Remove Button with its own AlertDialog */}
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      disabled={loadingRemove === memberId}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>
+                                        Xóa thành viên khỏi buổi tập
+                                      </AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        Bạn có chắc chắn muốn xóa{" "}
+                                        <strong>{member.name}</strong> khỏi buổi
+                                        tập này không? Hành động này sẽ xóa
+                                        thông tin tham gia và thanh toán của họ.
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() =>
+                                          handleRemoveParticipant(
+                                            memberId,
+                                            member.name
+                                          )
+                                        }
+                                        className="bg-destructive hover:bg-destructive/90"
+                                      >
+                                        Xóa
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+
+                                {/* Mark as Paid Button with its own AlertDialog */}
+                                {!isPaid && (
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0 text-green-500 hover:text-green-500 hover:bg-green-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        disabled={isMarkingAsPaid || isPaid}
+                                      >
+                                        <CreditCard className="h-4 w-4" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>
+                                          Đánh dấu đã thanh toán
+                                        </AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Bạn có chắc chắn muốn đánh dấu{" "}
+                                          <strong>{member.name}</strong> đã
+                                          thanh toán cho buổi tập này không?
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>
+                                          Hủy
+                                        </AlertDialogCancel>
+                                        <AlertDialogAction
+                                          onClick={() =>
+                                            handleMarkAsPaid(memberId)
+                                          }
+                                          className="bg-green-600 hover:bg-green-700"
+                                        >
+                                          Đánh dấu đã thanh toán
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                )}
+                              </div>
+                            </>
                           )}
                         </div>
                       </>
