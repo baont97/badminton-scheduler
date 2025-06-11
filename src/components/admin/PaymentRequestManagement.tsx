@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -176,6 +177,15 @@ const PaymentRequestManagement: React.FC = () => {
     }
   };
 
+  // Helper function to get user name with better fallback
+  const getUserName = (request: PaymentRequest) => {
+    if (request.profiles?.user_name) {
+      return request.profiles.user_name;
+    }
+    // Fallback to showing user ID if no name available
+    return `User ${request.user_id.slice(0, 8)}...`;
+  };
+
   return (
     <>
       <Card>
@@ -264,7 +274,9 @@ const PaymentRequestManagement: React.FC = () => {
                 {requests.map((request) => (
                   <TableRow key={request.id}>
                     <TableCell>
-                      {request.profiles?.user_name || "Không có tên"}
+                      <div className="font-medium">
+                        {getUserName(request)}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {request.badminton_days ? (
@@ -277,7 +289,11 @@ const PaymentRequestManagement: React.FC = () => {
                           </div>
                         </div>
                       ) : (
-                        "Không có thông tin"
+                        <div>
+                          <div className="text-sm text-gray-500">
+                            Day ID: {request.day_id.slice(0, 8)}...
+                          </div>
+                        </div>
                       )}
                     </TableCell>
                     <TableCell>

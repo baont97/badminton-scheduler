@@ -392,6 +392,10 @@ export type Database = {
           session_time: string
         }[]
       }
+      get_payment_image: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       start_processing_transaction: {
         Args: { p_order_id: string }
         Returns: {

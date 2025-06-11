@@ -1,3 +1,4 @@
+
 import { supabase } from "@/integrations/supabase/client";
 
 export interface PaymentRequest {
@@ -30,10 +31,13 @@ export async function fetchPaymentRequestsByStatus(
   try {
     console.log("Fetching payment requests with status:", status);
 
-    let query = supabase.from("payment_requests").select(`
+    // Build the query with proper joins
+    let query = supabase
+      .from("payment_requests")
+      .select(`
         *,
-        profiles(user_name),
-        badminton_days(date, session_time)
+        profiles!inner(user_name),
+        badminton_days!inner(date, session_time)
       `);
 
     // Add status filter only if not "all"
@@ -47,16 +51,21 @@ export async function fetchPaymentRequestsByStatus(
 
     if (error) {
       console.error("Error fetching payment requests:", error);
-
-      // Fallback: try simple query without joins
-      console.log("Trying fallback query...");
-      const { data: fallbackData, error: fallbackError } = await supabase
+      
+      // Fallback: try without badminton_days join if it fails
+      console.log("Trying fallback query without badminton_days join...");
+      let fallbackQuery = supabase
         .from("payment_requests")
-        .select("*")
-        .eq(
-          status !== "all" ? "status" : "id",
-          status !== "all" ? status : undefined
-        )
+        .select(`
+          *,
+          profiles!inner(user_name)
+        `);
+
+      if (status !== "all") {
+        fallbackQuery = fallbackQuery.eq("status", status);
+      }
+
+      const { data: fallbackData, error: fallbackError } = await fallbackQuery
         .order("created_at", { ascending: false });
 
       if (fallbackError) {
@@ -69,7 +78,7 @@ export async function fetchPaymentRequestsByStatus(
     }
 
     console.log("Query successful, data:", data);
-    return (data || []) as unknown as PaymentRequest[];
+    return (data || []) as PaymentRequest[];
   } catch (error) {
     console.error("Error in fetchPaymentRequestsByStatus:", error);
     return [];
