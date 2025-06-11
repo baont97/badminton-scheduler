@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { CreditCard, RefreshCw } from "lucide-react";
@@ -25,16 +26,16 @@ const AdminPaymentToggle: React.FC<AdminPaymentToggleProps> = ({
   const handleTogglePaymentStatus = async () => {
     setLoading(true);
     try {
-      const success = await toggleDayPaymentStatus(day.id, !day.can_pay);
+      const success = await toggleDayPaymentStatus(day.id, !day.canPay);
       if (success) {
         toast.success(
-          day.can_pay
+          day.canPay
             ? "Đã tắt khả năng thanh toán cho buổi tập này"
             : "Đã bật khả năng thanh toán cho buổi tập này"
         );
         onUpdateDay({
           ...day,
-          can_pay: !day.can_pay,
+          canPay: !day.canPay,
         });
       } else {
         toast.error("Có lỗi xảy ra khi thay đổi trạng thái thanh toán");
@@ -52,9 +53,9 @@ const AdminPaymentToggle: React.FC<AdminPaymentToggleProps> = ({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant={day.can_pay ? "destructive" : "default"}
+            variant={day.canPay ? "destructive" : "default"}
             size="icon"
-            className={!day.can_pay ? "bg-badminton hover:bg-badminton/80" : ""}
+            className={!day.canPay ? "bg-badminton hover:bg-badminton/80" : ""}
             onClick={handleTogglePaymentStatus}
             disabled={loading}
           >
@@ -66,7 +67,7 @@ const AdminPaymentToggle: React.FC<AdminPaymentToggleProps> = ({
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>{day.can_pay ? "Tắt thanh toán" : "Mở thanh toán"}</p>
+          <p>{day.canPay ? "Tắt thanh toán" : "Mở thanh toán"}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

@@ -31,14 +31,10 @@ export async function fetchPaymentRequestsByStatus(
   try {
     console.log("Fetching payment requests with status:", status);
 
-    // Build the query with proper joins
+    // Try simple query first without complex joins
     let query = supabase
       .from("payment_requests")
-      .select(`
-        *,
-        profiles!inner(user_name),
-        badminton_days!inner(date, session_time)
-      `);
+      .select("*");
 
     // Add status filter only if not "all"
     if (status !== "all") {
@@ -51,34 +47,38 @@ export async function fetchPaymentRequestsByStatus(
 
     if (error) {
       console.error("Error fetching payment requests:", error);
-      
-      // Fallback: try without badminton_days join if it fails
-      console.log("Trying fallback query without badminton_days join...");
-      let fallbackQuery = supabase
-        .from("payment_requests")
-        .select(`
-          *,
-          profiles!inner(user_name)
-        `);
-
-      if (status !== "all") {
-        fallbackQuery = fallbackQuery.eq("status", status);
-      }
-
-      const { data: fallbackData, error: fallbackError } = await fallbackQuery
-        .order("created_at", { ascending: false });
-
-      if (fallbackError) {
-        console.error("Fallback query also failed:", fallbackError);
-        return [];
-      }
-
-      console.log("Fallback data:", fallbackData);
-      return (fallbackData || []) as PaymentRequest[];
+      return [];
     }
 
     console.log("Query successful, data:", data);
-    return (data || []) as PaymentRequest[];
+
+    // Fetch user names separately to avoid join issues
+    const requestsWithUserNames = await Promise.all(
+      (data || []).map(async (request) => {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("user_name")
+          .eq("id", request.user_id)
+          .single();
+
+        const { data: dayData } = await supabase
+          .from("badminton_days")
+          .select("date, session_time")
+          .eq("id", request.day_id)
+          .single();
+
+        return {
+          ...request,
+          profiles: profileData ? { user_name: profileData.user_name } : null,
+          badminton_days: dayData ? { 
+            date: dayData.date, 
+            session_time: dayData.session_time 
+          } : null,
+        };
+      })
+    );
+
+    return requestsWithUserNames as PaymentRequest[];
   } catch (error) {
     console.error("Error in fetchPaymentRequestsByStatus:", error);
     return [];
