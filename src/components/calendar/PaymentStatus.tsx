@@ -93,27 +93,22 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({ day }) => {
 
   // Show payment controls if payment is needed
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
+      {/* Amount display */}
+      <Badge variant="outline" className="text-xs font-medium">
+        {formatCurrency(amountToPay)}
+      </Badge>
+      
       {/* Payment request button */}
       {day.canPay && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-badminton text-badminton hover:bg-badminton/10 text-xs"
-                onClick={() => setPaymentModalOpen(true)}
-              >
-                <CreditCard className="h-3 w-3 mr-1" />
-                {formatCurrency(amountToPay)}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Thanh toán {formatCurrency(amountToPay)}</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border-badminton text-badminton hover:bg-badminton/10"
+          onClick={() => setPaymentModalOpen(true)}
+        >
+          <CreditCard className="h-3 w-3" />
+        </Button>
       )}
 
       {/* Payment Modal */}
