@@ -6,6 +6,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import PaymentModal from "@/components/PaymentModal";
 import { hasPendingPaymentRequest } from "@/utils/api/paymentRequestApi";
 import { Check, Clock, CreditCard } from "lucide-react";
+import { formatCurrency } from "@/utils/schedulerUtils";
 import {
   Tooltip,
   TooltipContent,
@@ -100,15 +101,16 @@ export const PaymentStatus: React.FC<PaymentStatusProps> = ({ day }) => {
             <TooltipTrigger asChild>
               <Button
                 variant="outline"
-                size="icon"
-                className="border-badminton text-badminton hover:bg-badminton/10"
+                size="sm"
+                className="border-badminton text-badminton hover:bg-badminton/10 text-xs"
                 onClick={() => setPaymentModalOpen(true)}
               >
-                <CreditCard className="h-4 w-4" />
+                <CreditCard className="h-3 w-3 mr-1" />
+                {formatCurrency(amountToPay)}
               </Button>
             </TooltipTrigger>
             <TooltipContent>
-              <p>Thanh toán</p>
+              <p>Thanh toán {formatCurrency(amountToPay)}</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
