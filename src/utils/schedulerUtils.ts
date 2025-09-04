@@ -224,20 +224,22 @@ export const calculatePaymentAmount = (
       ? day.sessionCost * day.courtCount
       : day.sessionCost;
 
+  const totalExtraExpenses = getTotalExtraExpenses(day);
+  const extraExpensesPerPerson = totalExtraExpenses / totalParticipants;
+
   // Calculate court cost per slot for non-core members
   const costPerSlot = totalSessionCost / totalParticipants;
   let courtCost = costPerSlot * participantCount;
 
-  // Apply 20% extra and minimum 50k only from June 1, 2025 onwards
-  if (isAfterJune1st2025(day.date)) {
-    // Add 20% extra for non-core members
-    courtCost = courtCost * 1.2;
-
-    // Minimum 50k if the amount after adding 20% is less than 50k
-    if (courtCost < 50000) {
-      courtCost = 50000;
-    }
+  // Apply minimum 50k
+  if (courtCost < 50000) {
+    courtCost = 50000;
   }
 
-  return courtCost;
+  const extraCost = extraExpensesPerPerson * participantCount;
+
+  // Subtract user's own expense contributions
+  const userExpensesContribution = getMemberExpensesCredit(day, memberId);
+
+  return courtCost + extraCost - userExpensesContribution;
 };
