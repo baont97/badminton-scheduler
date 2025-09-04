@@ -224,9 +224,6 @@ export const calculatePaymentAmount = (
       ? day.sessionCost * day.courtCount
       : day.sessionCost;
 
-  const totalExtraExpenses = getTotalExtraExpenses(day);
-  const extraExpensesPerPerson = totalExtraExpenses / totalParticipants;
-
   // Calculate court cost per slot for non-core members
   const costPerSlot = totalSessionCost / totalParticipants;
   let courtCost = costPerSlot * participantCount;
@@ -242,10 +239,5 @@ export const calculatePaymentAmount = (
     }
   }
 
-  const extraCost = extraExpensesPerPerson * participantCount;
-
-  // Subtract user's own expense contributions
-  const userExpensesContribution = getMemberExpensesCredit(day, memberId);
-
-  return courtCost + extraCost - userExpensesContribution;
+  return courtCost;
 };
